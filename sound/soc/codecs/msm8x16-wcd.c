@@ -1294,6 +1294,7 @@ static int msm8x16_wcd_readable(struct snd_soc_codec *ssc, unsigned int reg)
 }
 
 #ifdef CONFIG_SOUND_CONTROL_HAX_3_GPL
+extern bool enable_fs;
 extern int snd_hax_reg_access(unsigned int);
 extern unsigned int snd_hax_cache_read(unsigned int);
 extern void snd_hax_cache_write(unsigned int, unsigned int);
@@ -1329,13 +1330,20 @@ int msm8x16_wcd_write(struct snd_soc_codec *codec, unsigned int reg,
 		return -ENODEV;
 	} else
 #ifdef CONFIG_SOUND_CONTROL_HAX_3_GPL
-	if (!snd_hax_reg_access(reg)) {
-		if (!((val = snd_hax_cache_read(reg)) != -1)) {
-			val = wcd9xxx_reg_read_safe(codec->control_data, reg);
-		}
-	} else {
-		snd_hax_cache_write(reg, value);
-		val = value;
+	if (!enable_fs)
+	   return __msm8x16_wcd_reg_write(codec, reg, (u8)value);
+
+	if (!snd_hax_reg_access(reg)) 
+	{
+	   if (!((val = snd_hax_cache_read(reg)) != -1)) 
+	   {
+	      val = wcd9xxx_reg_read_safe(codec->control_data, reg);
+	   }
+	} 
+	else 
+	{
+	    snd_hax_cache_write(reg, value);
+	    val = value;
 	}
 	return __msm8x16_wcd_reg_write(codec, reg, val);
 #else
