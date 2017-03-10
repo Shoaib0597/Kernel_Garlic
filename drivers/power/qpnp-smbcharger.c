@@ -39,8 +39,13 @@
 #include <linux/msm_bcl.h>
 #include <linux/ktime.h>
 #include "pmic-voter.h"
+
 #define ENABLE_SMART_CHARGING_CONTROL //enable smart charging control.
 bool g_do_not_support_qc=false;//LINE<20160720><don't support qc>wangyanhui
+
+#ifdef CONFIG_STATE_HELPER
+#include <linux/state_helper.h>
+#endif
 
 /* Mask/Bit helpers */
 #define _SMB_MASK(BITS, POS) \
@@ -1122,6 +1127,12 @@ static int get_prop_batt_capacity(struct smbchg_chip *chip)
 		pr_smb(PR_STATUS, "Couldn't get capacity rc = %d\n", rc);
 		capacity = DEFAULT_BATT_CAPACITY;
 	}
+
+	#ifdef CONFIG_STATE_HELPER
+	// Report Battery Level (%) to State Helper HotPlug.
+	batt_level_notify (capacity);
+	#endif
+
 	return capacity;
 }
 
