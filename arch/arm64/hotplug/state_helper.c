@@ -30,7 +30,6 @@
 #define DYN_DOWN_THRES			25
 #define DEFAULT_MAX_CPUS_ONLINE		NR_CPUS
 #define DEFAULT_MIN_CPUS_ONLINE		1
-#define DEFAULT_SUSP_CPUS		1
 #define DEFAULT_MAX_CPUS_ECONOMIC	2
 #define DEFAULT_MAX_CPUS_CRITICAL	1
 #define DEFAULT_BATT_ECONOMIC		25
@@ -45,7 +44,6 @@ static struct state_helper {
 	unsigned int dyn_down_threshold;
 	unsigned int max_cpus_online;
 	unsigned int min_cpus_online;
-	unsigned int max_cpus_susp;
 	unsigned int max_cpus_eco;
 	unsigned int max_cpus_cri;
 	unsigned int batt_level_eco;
@@ -59,7 +57,6 @@ static struct state_helper {
 	.dyn_down_threshold = DYN_DOWN_THRES,
 	.max_cpus_online = DEFAULT_MAX_CPUS_ONLINE,
 	.min_cpus_online = DEFAULT_MIN_CPUS_ONLINE,
-	.max_cpus_susp = DEFAULT_SUSP_CPUS,
 	.max_cpus_eco = DEFAULT_MAX_CPUS_ECONOMIC,
 	.max_cpus_cri = DEFAULT_MAX_CPUS_CRITICAL,
 	.batt_level_eco = DEFAULT_BATT_ECONOMIC,
@@ -88,7 +85,6 @@ struct cpu_status {
 static DEFINE_PER_CPU(struct cpu_status, status);
 static u64 last_load_time;
 
-static struct notifier_block notif;
 static struct workqueue_struct *helper_wq;
 static struct delayed_work helper_work;
 
@@ -100,10 +96,7 @@ do { 				\
 
 static void target_cpus_calc(void)
 {
-	if (state_suspended)
-		info.target_cpus = helper.max_cpus_susp;
-	else
-		info.target_cpus = helper.max_cpus_online;
+	info.target_cpus = helper.max_cpus_online;
 
 	info.target_cpus = min(info.target_cpus,
 				info.batt_limited_cpus);
@@ -180,15 +173,6 @@ static void thermal_check(void)
 		sum += !(msm_thermal_info.cpus_offlined & BIT(cpu));
 
 	info.therm_allowed_cpus = sum;
-}
-
-static void reschedule_nodelay(void)
-{
-	batt_level_check();
-	thermal_check();
-
-	cancel_delayed_work_sync(&helper_work);
-	queue_delayed_work(helper_wq, &helper_work, 0);
 }
 
 void reschedule_helper(void)
@@ -277,7 +261,7 @@ void load_notify(unsigned int cpu, unsigned int k)
 
 	per_cpu(status, cpu).load = k;
 
-	if (state_suspended || !helper.enabled || !helper.dynamic) {
+	if (!helper.enabled || !helper.dynamic) {
 		info.dynamic_cpus = NR_CPUS;
 		last_load_time = ktime_to_us(ktime_get());
 		return;
@@ -292,15 +276,6 @@ void load_notify(unsigned int cpu, unsigned int k)
 	load_cpus();
 }
 
-static int state_notifier_callback(struct notifier_block *this,
-				unsigned long event, void *data)
-{
-	if (helper.enabled)
-		reschedule_nodelay();
-
-	return NOTIFY_OK;
-}
-
 static void state_helper_start(void)
 {
 	helper_wq =
@@ -311,19 +286,11 @@ static void state_helper_start(void)
 		goto err_out;
 	}
 
-	notif.notifier_call = state_notifier_callback;
-	if (state_register_client(&notif)) {
-		pr_err("%s: Failed to register State notifier callback\n",
-			STATE_HELPER);
-		goto err_dev;
-	}
-
 	INIT_DELAYED_WORK(&helper_work, state_helper_work);
 	reschedule_helper();
 
 	return;
-err_dev:
-	destroy_workqueue(helper_wq);
+
 err_out:
 	helper.enabled = 0;
 	return;
@@ -332,9 +299,6 @@ err_out:
 static void __ref state_helper_stop(void)
 {
 	int cpu;
-
-	state_unregister_client(&notif);
-	notif.notifier_call = NULL;
 
 	flush_workqueue(helper_wq);
 	cancel_delayed_work_sync(&helper_work);
@@ -545,37 +509,11 @@ static ssize_t store_min_cpus_online(struct kobject *kobj,
 
 	helper.min_cpus_online = val;
 
-	if (state_suspended || !helper.enabled || !helper.dynamic)
+	if (!helper.enabled || !helper.dynamic)
 		return count;
 
 	last_load_time = ktime_to_us(ktime_get());
 	load_cpus();
-
-	return count;
-}
-
-static ssize_t show_max_cpus_susp(struct kobject *kobj,
-				struct kobj_attribute *attr, 
-				char *buf)
-{
-	return sprintf(buf, "%u\n",helper.max_cpus_susp);
-}
-
-static ssize_t store_max_cpus_susp(struct kobject *kobj,
-				struct kobj_attribute *attr,
-				const char *buf, size_t count)
-{
-	int ret;
-	unsigned int val;
-
-	ret = sscanf(buf, "%u", &val);
-	if (ret != 1 || val < 1)
-		return -EINVAL;
-
-	if (val > helper.max_cpus_online)
-		val = helper.max_cpus_online;
-
-	helper.max_cpus_susp = val;
 
 	return count;
 }
@@ -780,7 +718,6 @@ KERNEL_ATTR_RW(dyn_up_threshold);
 KERNEL_ATTR_RW(dyn_down_threshold);
 KERNEL_ATTR_RW(max_cpus_online);
 KERNEL_ATTR_RW(min_cpus_online);
-KERNEL_ATTR_RW(max_cpus_susp);
 KERNEL_ATTR_RW(max_cpus_eco);
 KERNEL_ATTR_RW(max_cpus_cri);
 KERNEL_ATTR_RW(batt_level_eco);
@@ -800,7 +737,6 @@ static struct attribute *state_helper_attrs[] = {
 	&dyn_down_threshold_attr.attr,
 	&max_cpus_online_attr.attr,
 	&min_cpus_online_attr.attr,
-	&max_cpus_susp_attr.attr,
 	&max_cpus_eco_attr.attr,
 	&max_cpus_cri_attr.attr,
 	&batt_level_eco_attr.attr,

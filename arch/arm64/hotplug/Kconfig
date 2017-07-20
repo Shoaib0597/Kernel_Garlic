@@ -1,3 +1,2 @@
 config STATE_HELPER
         bool "State Helper"
-	    depends on STATE_NOTIFIER
