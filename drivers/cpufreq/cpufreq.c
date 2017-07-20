@@ -417,6 +417,19 @@ void cpufreq_freq_transition_end(struct cpufreq_policy *policy,
 }
 EXPORT_SYMBOL_GPL(cpufreq_freq_transition_end);
 
+/**
+ * cpufreq_notify_utilization - Notify CPU UserSpace about CPU-Utilization
+ * Changes.
+ *
+ * This Function is called Everytime the CPU-Load is Evaluated by Supported
+ * CPU-Governors. It Notifies UserSpace of CPU-Load Changes via sysFS.
+ */
+
+void cpufreq_notify_utilization (struct cpufreq_policy *policy, unsigned int util)
+{
+	if (policy)
+	   policy->util = util;
+}
 
 /*********************************************************************
  *                          SYSFS INTERFACE                          *
@@ -1257,6 +1270,8 @@ static int __cpufreq_add_dev(struct device *dev, struct subsys_interface *sif)
 	for_each_cpu(j, policy->cpus)
 		per_cpu(cpufreq_cpu_data, j) = policy;
 	write_unlock_irqrestore(&cpufreq_driver_lock, flags);
+
+	policy->util = 0;
 
 	if (cpufreq_driver->get && !cpufreq_driver->setpolicy) {
 		policy->cur = cpufreq_driver->get(policy->cpu);
@@ -2375,6 +2390,26 @@ unlock:
 	return ret;
 }
 EXPORT_SYMBOL(cpufreq_update_policy);
+
+/*
+ *	cpufreq_quick_get_util - Get the CPU-Utilization Information.
+ *	@cpu: CPU whose Load is to be Known.
+ */
+
+unsigned int cpufreq_quick_get_util (unsigned int cpu)
+{
+	struct cpufreq_policy *policy = cpufreq_cpu_get(cpu);
+	unsigned int load = 0;
+
+	if (policy) 
+	{
+	   load = policy->util;
+	   cpufreq_cpu_put (policy);
+	}
+
+	return load;
+}
+EXPORT_SYMBOL(cpufreq_quick_get_util);
 
 static int cpufreq_cpu_callback(struct notifier_block *nfb,
 					unsigned long action, void *hcpu)
