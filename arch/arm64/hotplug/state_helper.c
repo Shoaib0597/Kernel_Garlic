@@ -28,7 +28,6 @@
 #define DYN_DOWN_THRES			25
 #define DEFAULT_MAX_CPUS_ONLINE		NR_CPUS
 #define DEFAULT_MIN_CPUS_ONLINE		1
-#define DEBUG_MASK			0
 
 static struct state_helper {
 	unsigned int enabled;
@@ -38,7 +37,6 @@ static struct state_helper {
 	unsigned int dyn_down_threshold;
 	unsigned int max_cpus_online;
 	unsigned int min_cpus_online;
-	unsigned int debug;
 } helper = {
 	.enabled = HELPER_ENABLED,
 	.dynamic = DYNAMIC_ENABLED,
@@ -47,7 +45,6 @@ static struct state_helper {
 	.dyn_down_threshold = DYN_DOWN_THRES,
 	.max_cpus_online = DEFAULT_MAX_CPUS_ONLINE,
 	.min_cpus_online = DEFAULT_MIN_CPUS_ONLINE,
-	.debug = DEBUG_MASK
 };
 
 static struct state_info {
@@ -67,12 +64,6 @@ static u64 last_load_time;
 static struct workqueue_struct *helper_wq;
 static struct delayed_work helper_work;
 
-#define dprintk(msg...)		\
-do { 				\
-	if (helper.debug)	\
-		pr_info(msg);	\
-} while (0)
-
 static void target_cpus_calc(void)
 {
 	info.target_cpus = helper.max_cpus_online;
@@ -91,8 +82,7 @@ static void __ref state_helper_work(struct work_struct *work)
 		for(cpu = NR_CPUS-1; cpu > 0; cpu--) {
 			if (!cpu_online(cpu))
 				continue;
-			dprintk("%s: Switching CPU%u offline\n",
-				STATE_HELPER, cpu);
+
 			cpu_down(cpu);
 			if (info.target_cpus >= num_online_cpus())
 				break;
@@ -102,24 +92,12 @@ static void __ref state_helper_work(struct work_struct *work)
 			if (cpu_online(cpu))
 				continue;
 			cpu_up(cpu);
-			dprintk("%s: Switching CPU%u online\n",
-				STATE_HELPER, cpu);
+
 			if (info.target_cpus <= num_online_cpus())
 				break;
 		}
-	} else {
-		dprintk("%s: Target already achieved: %u\n",
-			STATE_HELPER, info.target_cpus);
+	} else
 		return;
-	}
-
-	if (helper.debug) {
-		pr_info("%s: Target requested: %u\n",
-			STATE_HELPER, info.target_cpus);
-		for_each_possible_cpu(cpu)
-			pr_info("%s: CPU%u status:%u\n",
-				STATE_HELPER, cpu, cpu_online(cpu));
-	}
 }
 
 void reschedule_helper(void)
@@ -424,32 +402,6 @@ static ssize_t store_min_cpus_online(struct kobject *kobj,
 	return count;
 }
 
-static ssize_t show_debug_mask(struct kobject *kobj,
-				struct kobj_attribute *attr, 
-				char *buf)
-{
-	return sprintf(buf, "%u\n", helper.debug);
-}
-
-static ssize_t store_debug_mask(struct kobject *kobj,
-				struct kobj_attribute *attr,
-				const char *buf, size_t count)
-{
-	int ret;
-	unsigned int val;
-
-	ret = sscanf(buf, "%u", &val);
-	if (ret != 1 || val < 0 || val > 1)
-		return -EINVAL;
-
-	if (val == helper.debug)
-		return count;
-
-	helper.debug = val;
-
-	return count;
-}
-
 static ssize_t show_target_cpus(struct kobject *kobj,
 				struct kobj_attribute *attr, 
 				char *buf)
@@ -476,7 +428,6 @@ KERNEL_ATTR_RW(dyn_up_threshold);
 KERNEL_ATTR_RW(dyn_down_threshold);
 KERNEL_ATTR_RW(max_cpus_online);
 KERNEL_ATTR_RW(min_cpus_online);
-KERNEL_ATTR_RW(debug_mask);
 KERNEL_ATTR_RO(target_cpus);
 
 static struct attribute *state_helper_attrs[] = {
@@ -487,7 +438,6 @@ static struct attribute *state_helper_attrs[] = {
 	&dyn_down_threshold_attr.attr,
 	&max_cpus_online_attr.attr,
 	&min_cpus_online_attr.attr,
-	&debug_mask_attr.attr,
 	&target_cpus_attr.attr,
 	NULL,
 };
