@@ -129,13 +129,19 @@ void reschedule_helper(void)
 
 static void load_cpus(void)
 {
-	unsigned int avg_load = 0, cpu, req_cpus;
-	unsigned int online_cpus = num_online_cpus();
+	unsigned int avg_load = 0, cpu;
+	unsigned int online_core_count = 0;
+	int req_cpus;
 
-	for_each_online_cpu(cpu)
-		avg_load += cpufreq_quick_get_util (cpu);
+	get_online_cpus();
+	for_each_online_cpu (cpu)
+	{
+		avg_load = avg_load + cpufreq_quick_get_util (cpu);
+		online_core_count++;
+	}
+	put_online_cpus();
 
-	avg_load /= online_cpus;
+	avg_load = avg_load / online_core_count;
 
 	if (avg_load >= helper.dyn_up_threshold) {
 		req_cpus = info.dynamic_cpus + 1;
@@ -153,7 +159,7 @@ static void load_cpus(void)
 		info.dynamic_cpus = req_cpus;
 	}
 
-	if (online_cpus != info.dynamic_cpus)
+	if (online_core_count - 4 != info.dynamic_cpus)
 		reschedule_helper();
 }
 
