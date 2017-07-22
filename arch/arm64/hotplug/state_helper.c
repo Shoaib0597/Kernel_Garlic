@@ -14,6 +14,7 @@
 #include <linux/platform_device.h>
 #include <linux/state_helper.h>
 #include <linux/cpufreq.h>
+#include <linux/display_state.h>
 
 #define STATE_HELPER			"state_helper"
 #define HELPER_ENABLED			0
@@ -119,7 +120,7 @@ static void __ref state_helper_work(struct work_struct *work)
 
 void reschedule_helper(void)
 {	
-	if (!helper.enabled)
+	if (!helper.enabled || !is_display_on ())
 		return;
 
 	cancel_delayed_work_sync(&helper_work);
@@ -167,7 +168,7 @@ void load_notify ()
 {
 	u64 now;
 
-	if (!helper.enabled || !helper.dynamic) {
+	if (!helper.enabled || !helper.dynamic || !is_display_on ()) {
 		info.dynamic_cpus = helper.max_cpus_online;
 		last_load_time = ktime_to_us(ktime_get());
 		return;
