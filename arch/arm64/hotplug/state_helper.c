@@ -44,10 +44,8 @@ static struct state_helper {
 };
 
 static struct state_info {
-	unsigned int target_cpus;
 	unsigned int dynamic_cpus;
 } info = {
-	.target_cpus = 4,
 	.dynamic_cpus = DEFAULT_MAX_CPUS_ONLINE,
 };
 
@@ -60,40 +58,66 @@ static u64 last_load_time;
 static struct workqueue_struct *helper_wq;
 static struct delayed_work helper_work;
 
-static void target_cpus_calc(void)
-{
-	info.target_cpus = helper.max_cpus_online;
-
-	info.target_cpus = min(info.target_cpus,
-				info.dynamic_cpus);
-}
-
 static void __ref state_helper_work(struct work_struct *work)
 {
-	int cpu;
-
-	target_cpus_calc();
-
-	if (info.target_cpus < num_online_cpus()) {
-		for(cpu = 4-1; cpu > 0; cpu--) {
-			if (!cpu_online(cpu))
-				continue;
-
-			cpu_down(cpu);
-			if (info.target_cpus >= num_online_cpus())
-				break;
-		}
-	} else if (info.target_cpus > num_online_cpus()) {
-		for(cpu = 1; cpu < 4; cpu++) {
-			if (cpu_online(cpu))
-				continue;
-			cpu_up(cpu);
-
-			if (info.target_cpus <= num_online_cpus())
-				break;
-		}
-	} else
-		return;
+	if (info.dynamic_cpus == 0)
+	{
+	   if (cpu_online(3))
+	      cpu_down(3);
+	   if (cpu_online(2))
+	      cpu_down(2);
+	   if (cpu_online(1)) 
+              cpu_down(1);
+	   if (cpu_online(0))
+	      cpu_down(0);
+	}
+	else if (info.dynamic_cpus == 1)
+	{
+	        if (!cpu_online(0))
+	           cpu_up(0);
+	 
+	        if (cpu_online(3))
+	     	   cpu_down(3);
+	        if (cpu_online(2))
+	       	   cpu_down(2);
+	      	if (cpu_online(1)) 
+        	   cpu_down(1);
+	}
+	else if (info.dynamic_cpus == 2)
+	{
+	       	if (!cpu_online(0))
+	       	   cpu_up(0);
+		if (!cpu_online(1))
+	  	   cpu_up(1);
+	   
+	        if (cpu_online(3))
+	       	   cpu_down(3);
+		if (cpu_online(2))
+	      	   cpu_down(2);
+	}
+	else if (info.dynamic_cpus == 3)
+	{
+		if (!cpu_online(0))
+	       	   cpu_up(0);
+		if (!cpu_online(1))
+	   	   cpu_up(1);
+		if (!cpu_online(2))
+	  	   cpu_up(2);
+	   
+		if (cpu_online(3))
+	   	   cpu_down(3);
+	}
+	else if (info.dynamic_cpus == 4)
+	{
+		if (!cpu_online(0))
+	   	   cpu_up(0);
+		if (!cpu_online(1))
+	   	   cpu_up(1);
+		if (!cpu_online(2))
+	   	   cpu_up(2);
+		if (!cpu_online(3))
+	   	   cpu_up(3);
+	}
 }
 
 void reschedule_helper(void)
@@ -378,7 +402,7 @@ static ssize_t store_min_cpus_online(struct kobject *kobj,
 	unsigned int val;
 
 	ret = sscanf(buf, "%u", &val);
-	if (ret != 1 || val < 1)
+	if (ret != 1 || val < 0)
 		return -EINVAL;
 
 	if (val > helper.max_cpus_online)
@@ -398,17 +422,6 @@ static ssize_t store_min_cpus_online(struct kobject *kobj,
 	return count;
 }
 
-static ssize_t show_target_cpus(struct kobject *kobj,
-				struct kobj_attribute *attr, 
-				char *buf)
-{
-	if (!helper.enabled) {
-		target_cpus_calc();
-	}
-
-	return sprintf(buf, "%u\n", info.target_cpus);
-}
-
 #define KERNEL_ATTR_RW(_name) 				\
 static struct kobj_attribute _name##_attr = 		\
 	__ATTR(_name, 0664, show_##_name, store_##_name)
@@ -424,7 +437,6 @@ KERNEL_ATTR_RW(dyn_up_threshold);
 KERNEL_ATTR_RW(dyn_down_threshold);
 KERNEL_ATTR_RW(max_cpus_online);
 KERNEL_ATTR_RW(min_cpus_online);
-KERNEL_ATTR_RO(target_cpus);
 
 static struct attribute *state_helper_attrs[] = {
 	&enabled_attr.attr,
@@ -434,7 +446,6 @@ static struct attribute *state_helper_attrs[] = {
 	&dyn_down_threshold_attr.attr,
 	&max_cpus_online_attr.attr,
 	&min_cpus_online_attr.attr,
-	&target_cpus_attr.attr,
 	NULL,
 };
 
