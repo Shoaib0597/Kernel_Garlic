@@ -22,7 +22,7 @@
 #define DYN_INTERVAL_MS			200
 #define DYN_UP_THRES			75
 #define DYN_DOWN_THRES			25
-#define DEFAULT_MAX_CPUS_ONLINE		NR_CPUS
+#define DEFAULT_MAX_CPUS_ONLINE		4
 #define DEFAULT_MIN_CPUS_ONLINE		1
 
 static struct state_helper {
@@ -47,8 +47,8 @@ static struct state_info {
 	unsigned int target_cpus;
 	unsigned int dynamic_cpus;
 } info = {
-	.target_cpus = NR_CPUS,
-	.dynamic_cpus = NR_CPUS,
+	.target_cpus = 4,
+	.dynamic_cpus = DEFAULT_MAX_CPUS_ONLINE,
 };
 
 struct cpu_status {
@@ -75,7 +75,7 @@ static void __ref state_helper_work(struct work_struct *work)
 	target_cpus_calc();
 
 	if (info.target_cpus < num_online_cpus()) {
-		for(cpu = NR_CPUS-1; cpu > 0; cpu--) {
+		for(cpu = 4-1; cpu > 0; cpu--) {
 			if (!cpu_online(cpu))
 				continue;
 
@@ -84,7 +84,7 @@ static void __ref state_helper_work(struct work_struct *work)
 				break;
 		}
 	} else if (info.target_cpus > num_online_cpus()) {
-		for(cpu = 1; cpu < NR_CPUS; cpu++) {
+		for(cpu = 1; cpu < 4; cpu++) {
 			if (cpu_online(cpu))
 				continue;
 			cpu_up(cpu);
@@ -143,7 +143,7 @@ void load_notify(unsigned int cpu, unsigned int k)
 	per_cpu(status, cpu).load = k;
 
 	if (!helper.enabled || !helper.dynamic) {
-		info.dynamic_cpus = NR_CPUS;
+		info.dynamic_cpus = helper.max_cpus_online;
 		last_load_time = ktime_to_us(ktime_get());
 		return;
 	}
@@ -247,7 +247,7 @@ static ssize_t store_dynamic(struct kobject *kobj,
 	helper.dynamic = val;
 
 	if (!helper.dynamic)
-		info.dynamic_cpus = NR_CPUS;
+		info.dynamic_cpus = helper.max_cpus_online;
 
 	reschedule_helper();
 
@@ -350,8 +350,8 @@ static ssize_t store_max_cpus_online(struct kobject *kobj,
 	if (ret != 1 || val < 1)
 		return -EINVAL;
 
-	if (val > NR_CPUS)
-		val = NR_CPUS;
+	if (val > DEFAULT_MAX_CPUS_ONLINE)
+		val = DEFAULT_MAX_CPUS_ONLINE;
 
 	if (val < helper.min_cpus_online)
 		val = helper.min_cpus_online;
