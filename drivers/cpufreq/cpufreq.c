@@ -432,13 +432,14 @@ EXPORT_SYMBOL_GPL(cpufreq_freq_transition_end);
 void cpufreq_notify_utilization (struct cpufreq_policy *policy, unsigned int util)
 {
 	if (policy)
+	#ifdef CONFIG_STATE_HELPER
 	{
+	#endif
 	   policy->util = util;
-		
 	   #ifdef CONFIG_STATE_HELPER
-	   load_notify (policy->cpu, util);
-	   #endif
+	   load_notify ();
 	}
+	#endif
 }
 
 /*********************************************************************

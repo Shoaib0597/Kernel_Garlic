@@ -13,6 +13,7 @@
 #include <linux/module.h>
 #include <linux/platform_device.h>
 #include <linux/state_helper.h>
+#include <linux/cpufreq.h>
 
 #define STATE_HELPER			"state_helper"
 #define HELPER_ENABLED			0
@@ -49,10 +50,6 @@ static struct state_info {
 	.dynamic_cpus = DEFAULT_MAX_CPUS_ONLINE,
 };
 
-struct cpu_status {
-	unsigned int load;
-};
-static DEFINE_PER_CPU(struct cpu_status, status);
 static u64 last_load_time;
 
 static struct workqueue_struct *helper_wq;
@@ -136,7 +133,7 @@ static void load_cpus(void)
 	unsigned int online_cpus = num_online_cpus();
 
 	for_each_online_cpu(cpu)
-		avg_load += per_cpu(status, cpu).load;
+		avg_load += cpufreq_quick_get_util (cpu);
 
 	avg_load /= online_cpus;
 
@@ -160,11 +157,9 @@ static void load_cpus(void)
 		reschedule_helper();
 }
 
-void load_notify(unsigned int cpu, unsigned int k)
+void load_notify ()
 {
 	u64 now;
-
-	per_cpu(status, cpu).load = k;
 
 	if (!helper.enabled || !helper.dynamic) {
 		info.dynamic_cpus = helper.max_cpus_online;
@@ -492,10 +487,7 @@ static struct platform_driver state_helper_driver = {
 
 static int __init state_helper_init(void)
 {
-	int ret, cpu;
-
-	for_each_possible_cpu(cpu)
-		per_cpu(status, cpu).load = 0;
+	int ret;
 
 	ret = platform_driver_register(&state_helper_driver);
 	if (ret) {

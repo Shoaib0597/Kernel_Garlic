@@ -2,6 +2,6 @@
 #define __LINUX_STATE_HELPER_H
 
 extern void reschedule_helper(void);
-extern void load_notify (unsigned int cpu, unsigned int k);
+extern void load_notify (void);
 
 #endif /* _LINUX_STATE_HELPER_H */
