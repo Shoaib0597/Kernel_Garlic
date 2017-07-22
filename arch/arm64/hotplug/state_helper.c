@@ -23,7 +23,13 @@
 #define STATE_HELPER			"state_helper"
 #define HELPER_ENABLED			0
 #define DELAY_MSEC			100
+#define DYNAMIC_ENABLED			0
+#define MIN_ALLOWED_INTERVAL		20
+#define DYN_INTERVAL_MS			200
+#define DYN_UP_THRES			75
+#define DYN_DOWN_THRES			25
 #define DEFAULT_MAX_CPUS_ONLINE		NR_CPUS
+#define DEFAULT_MIN_CPUS_ONLINE		1
 #define DEFAULT_SUSP_CPUS		1
 #define DEFAULT_MAX_CPUS_ECONOMIC	2
 #define DEFAULT_MAX_CPUS_CRITICAL	1
@@ -33,7 +39,12 @@
 
 static struct state_helper {
 	unsigned int enabled;
+	unsigned int dynamic;
+	unsigned int dyn_interval_ms;
+	unsigned int dyn_up_threshold;
+	unsigned int dyn_down_threshold;
 	unsigned int max_cpus_online;
+	unsigned int min_cpus_online;
 	unsigned int max_cpus_susp;
 	unsigned int max_cpus_eco;
 	unsigned int max_cpus_cri;
@@ -42,7 +53,12 @@ static struct state_helper {
 	unsigned int debug;
 } helper = {
 	.enabled = HELPER_ENABLED,
+	.dynamic = DYNAMIC_ENABLED,
+	.dyn_interval_ms = DYN_INTERVAL_MS,
+	.dyn_up_threshold = DYN_UP_THRES,
+	.dyn_down_threshold = DYN_DOWN_THRES,
 	.max_cpus_online = DEFAULT_MAX_CPUS_ONLINE,
+	.min_cpus_online = DEFAULT_MIN_CPUS_ONLINE,
 	.max_cpus_susp = DEFAULT_SUSP_CPUS,
 	.max_cpus_eco = DEFAULT_MAX_CPUS_ECONOMIC,
 	.max_cpus_cri = DEFAULT_MAX_CPUS_CRITICAL,
@@ -55,14 +71,22 @@ static struct state_info {
 	unsigned int target_cpus;
 	unsigned int batt_limited_cpus;
 	unsigned int therm_allowed_cpus;
+	unsigned int dynamic_cpus;
 	unsigned int batt_level;
 	long current_temp;
 } info = {
 	.target_cpus = NR_CPUS,
 	.batt_limited_cpus = NR_CPUS,
 	.therm_allowed_cpus = NR_CPUS,
+	.dynamic_cpus = NR_CPUS,
 	.batt_level = 100
 };
+
+struct cpu_status {
+	unsigned int load;
+};
+static DEFINE_PER_CPU(struct cpu_status, status);
+static u64 last_load_time;
 
 static struct notifier_block notif;
 static struct workqueue_struct *helper_wq;
@@ -82,9 +106,11 @@ static void target_cpus_calc(void)
 		info.target_cpus = helper.max_cpus_online;
 
 	info.target_cpus = min(info.target_cpus,
-				info.batt_limited_cpus);	
+				info.batt_limited_cpus);
 	info.target_cpus = min(info.target_cpus,
-				info.therm_allowed_cpus);	
+				info.therm_allowed_cpus);
+	info.target_cpus = min(info.target_cpus,
+				info.dynamic_cpus);
 }
 
 static void __ref state_helper_work(struct work_struct *work)
@@ -215,6 +241,57 @@ void thermal_level_relay(long temp)
 	info.current_temp = temp;
 }
 
+static void load_cpus(void)
+{
+	unsigned int avg_load = 0, cpu, req_cpus;
+	unsigned int online_cpus = num_online_cpus();
+
+	for_each_online_cpu(cpu)
+		avg_load += per_cpu(status, cpu).load;
+
+	avg_load /= online_cpus;
+
+	if (avg_load >= helper.dyn_up_threshold) {
+		req_cpus = info.dynamic_cpus + 1;
+
+		if (req_cpus > helper.max_cpus_online)
+			req_cpus = helper.max_cpus_online;
+
+		info.dynamic_cpus = req_cpus;
+	} else if (avg_load <= helper.dyn_down_threshold) {
+		req_cpus = info.dynamic_cpus - 1;
+
+		if (req_cpus < helper.min_cpus_online)
+			req_cpus = helper.min_cpus_online;
+
+		info.dynamic_cpus = req_cpus;
+	}
+
+	if (online_cpus != info.dynamic_cpus)
+		reschedule_helper();
+}
+
+void load_notify(unsigned int cpu, unsigned int k)
+{
+	u64 now;
+
+	per_cpu(status, cpu).load = k;
+
+	if (state_suspended || !helper.enabled || !helper.dynamic) {
+		info.dynamic_cpus = NR_CPUS;
+		last_load_time = ktime_to_us(ktime_get());
+		return;
+	}
+
+	now = ktime_to_us(ktime_get());
+
+	if (now - last_load_time < helper.dyn_interval_ms * USEC_PER_MSEC)
+		return;
+
+	last_load_time = ktime_to_us(ktime_get());
+	load_cpus();
+}
+
 static int state_notifier_callback(struct notifier_block *this,
 				unsigned long event, void *data)
 {
@@ -302,6 +379,115 @@ static ssize_t store_enabled(struct kobject *kobj,
 	return count;
 }
 
+static ssize_t show_dynamic(struct kobject *kobj,
+				struct kobj_attribute *attr, 
+				char *buf)
+{
+	return sprintf(buf, "%u\n", helper.dynamic);
+}
+
+static ssize_t store_dynamic(struct kobject *kobj,
+				struct kobj_attribute *attr,
+				const char *buf, size_t count)
+{
+	int ret;
+	unsigned int val;
+
+	ret = sscanf(buf, "%u", &val);
+	if (ret != 1 || val < 0 || val > 1)
+		return -EINVAL;
+
+	if (val == helper.dynamic)
+		return count;
+
+	helper.dynamic = val;
+
+	if (!helper.dynamic)
+		info.dynamic_cpus = NR_CPUS;
+
+	reschedule_helper();
+
+	return count;
+}
+
+static ssize_t show_dyn_interval_ms(struct kobject *kobj,
+				struct kobj_attribute *attr, 
+				char *buf)
+{
+	return sprintf(buf, "%u\n",helper.dyn_interval_ms);
+}
+
+static ssize_t store_dyn_interval_ms(struct kobject *kobj,
+				struct kobj_attribute *attr,
+				const char *buf, size_t count)
+{
+	int ret;
+	unsigned int val;
+
+	ret = sscanf(buf, "%u", &val);
+	if (ret != 1)
+		return -EINVAL;
+
+	if (val < MIN_ALLOWED_INTERVAL)
+		val = MIN_ALLOWED_INTERVAL;
+
+	helper.dyn_interval_ms = val;
+
+	return count;
+}
+
+static ssize_t show_dyn_up_threshold(struct kobject *kobj,
+				struct kobj_attribute *attr, 
+				char *buf)
+{
+	return sprintf(buf, "%u\n",helper.dyn_up_threshold);
+}
+
+static ssize_t store_dyn_up_threshold(struct kobject *kobj,
+				struct kobj_attribute *attr,
+				const char *buf, size_t count)
+{
+	int ret;
+	unsigned int val;
+
+	ret = sscanf(buf, "%u", &val);
+	if (ret != 1)
+		return -EINVAL;
+
+	if (val < helper.dyn_down_threshold)
+		val = helper.dyn_down_threshold;
+
+	helper.dyn_up_threshold = val;
+
+	return count;
+}
+
+static ssize_t show_dyn_down_threshold(struct kobject *kobj,
+				struct kobj_attribute *attr, 
+				char *buf)
+{
+	return sprintf(buf, "%u\n",helper.dyn_down_threshold);
+}
+
+static ssize_t store_dyn_down_threshold(struct kobject *kobj,
+				struct kobj_attribute *attr,
+				const char *buf, size_t count)
+{
+	int ret;
+	unsigned int val;
+
+	ret = sscanf(buf, "%u", &val);
+	if (ret != 1)
+		return -EINVAL;
+
+	if (val > helper.dyn_up_threshold)
+		val = helper.dyn_up_threshold;
+
+	helper.dyn_down_threshold = val;
+
+	return count;
+}
+
 static ssize_t show_max_cpus_online(struct kobject *kobj,
 				struct kobj_attribute *attr, 
 				char *buf)
@@ -323,9 +509,47 @@ static ssize_t store_max_cpus_online(struct kobject *kobj,
 	if (val > NR_CPUS)
 		val = NR_CPUS;
 
+	if (val < helper.min_cpus_online)
+		val = helper.min_cpus_online;
+
 	helper.max_cpus_online = val;
 
 	reschedule_helper();
+
+	return count;
+}
+
+static ssize_t show_min_cpus_online(struct kobject *kobj,
+				struct kobj_attribute *attr, 
+				char *buf)
+{
+	return sprintf(buf, "%u\n",helper.min_cpus_online);
+}
+
+static ssize_t store_min_cpus_online(struct kobject *kobj,
+				struct kobj_attribute *attr,
+				const char *buf, size_t count)
+{
+	int ret;
+	unsigned int val;
+
+	ret = sscanf(buf, "%u", &val);
+	if (ret != 1 || val < 1)
+		return -EINVAL;
+
+	if (val > helper.max_cpus_online)
+		val = helper.max_cpus_online;
+
+	if (val == helper.min_cpus_online)
+		return count;
+
+	helper.min_cpus_online = val;
+
+	if (state_suspended || !helper.enabled || !helper.dynamic)
+		return count;
+
+	last_load_time = ktime_to_us(ktime_get());
+	load_cpus();
 
 	return count;
 }
@@ -550,7 +774,12 @@ static struct kobj_attribute _name##_attr = 		\
 	__ATTR(_name, 0444, show_##_name, NULL)
 
 KERNEL_ATTR_RW(enabled);
+KERNEL_ATTR_RW(dynamic);
+KERNEL_ATTR_RW(dyn_interval_ms);
+KERNEL_ATTR_RW(dyn_up_threshold);
+KERNEL_ATTR_RW(dyn_down_threshold);
 KERNEL_ATTR_RW(max_cpus_online);
+KERNEL_ATTR_RW(min_cpus_online);
 KERNEL_ATTR_RW(max_cpus_susp);
 KERNEL_ATTR_RW(max_cpus_eco);
 KERNEL_ATTR_RW(max_cpus_cri);
@@ -565,7 +794,12 @@ KERNEL_ATTR_RO(current_temp);
 
 static struct attribute *state_helper_attrs[] = {
 	&enabled_attr.attr,
+	&dynamic_attr.attr,
+	&dyn_interval_ms_attr.attr,
+	&dyn_up_threshold_attr.attr,
+	&dyn_down_threshold_attr.attr,
 	&max_cpus_online_attr.attr,
+	&min_cpus_online_attr.attr,
 	&max_cpus_susp_attr.attr,
 	&max_cpus_eco_attr.attr,
 	&max_cpus_cri_attr.attr,
@@ -623,7 +857,10 @@ static struct platform_driver state_helper_driver = {
 
 static int __init state_helper_init(void)
 {
-	int ret;
+	int ret, cpu;
+
+	for_each_possible_cpu(cpu)
+		per_cpu(status, cpu).load = 0;
 
 	ret = platform_driver_register(&state_helper_driver);
 	if (ret) {
@@ -654,3 +891,4 @@ module_exit(state_helper_exit);
 MODULE_AUTHOR("Pranav Vashi <neobuddy89@gmail.com>");
 MODULE_DESCRIPTION("State Helper Driver");
 MODULE_LICENSE("GPLv2");
+

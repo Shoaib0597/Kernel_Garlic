@@ -30,6 +30,10 @@
 #include <linux/tick.h>
 #include <trace/events/power.h>
 
+#ifdef CONFIG_STATE_HELPER
+#include <linux/state_helper.h>
+#endif
+
 /**
  * The "cpufreq driver" - the arch- or hardware-dependent low
  * level driver of CPUFreq support, and its spinlock. This lock
@@ -428,7 +432,13 @@ EXPORT_SYMBOL_GPL(cpufreq_freq_transition_end);
 void cpufreq_notify_utilization (struct cpufreq_policy *policy, unsigned int util)
 {
 	if (policy)
+	{
 	   policy->util = util;
+		
+	   #ifdef CONFIG_STATE_HELPER
+	   load_notify (policy->cpu, util);
+	   #endif
+	}
 }
 
 /*********************************************************************
