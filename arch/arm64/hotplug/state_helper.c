@@ -316,11 +316,11 @@ static ssize_t store_dyn_up_threshold(struct kobject *kobj,
 	unsigned int val;
 
 	ret = sscanf(buf, "%u", &val);
-	if (ret != 1)
+	if (ret != 1 || val > 100)
 		return -EINVAL;
 
-	if (val < helper.dyn_down_threshold)
-		val = helper.dyn_down_threshold;
+	if (val <= helper.dyn_down_threshold)
+		val = helper.dyn_down_threshold + 1;
 
 	helper.dyn_up_threshold = val;
 
@@ -342,11 +342,11 @@ static ssize_t store_dyn_down_threshold(struct kobject *kobj,
 	unsigned int val;
 
 	ret = sscanf(buf, "%u", &val);
-	if (ret != 1)
+	if (ret != 1 || val < 0)
 		return -EINVAL;
 
-	if (val > helper.dyn_up_threshold)
-		val = helper.dyn_up_threshold;
+	if (val >= helper.dyn_up_threshold)
+		val = helper.dyn_up_threshold - 1;
 
 	helper.dyn_down_threshold = val;
 
