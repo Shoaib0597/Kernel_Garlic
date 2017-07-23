@@ -18,10 +18,8 @@
 
 #define STATE_HELPER			"state_helper"
 #define HELPER_ENABLED			0
-#define DELAY_MSEC			100
 #define DYNAMIC_ENABLED			0
-#define MIN_ALLOWED_INTERVAL		20
-#define DYN_INTERVAL_MS			200
+#define DYN_INTERVAL_MS			500
 #define DYN_UP_THRES			75
 #define DYN_DOWN_THRES			25
 #define DEFAULT_MAX_CPUS_ONLINE		4
@@ -125,7 +123,7 @@ void reschedule_helper(void)
 
 	cancel_delayed_work_sync(&helper_work);
 	queue_delayed_work(helper_wq, &helper_work,
-		msecs_to_jiffies(DELAY_MSEC));
+		msecs_to_jiffies(100));
 }
 
 static void load_cpus(void)
@@ -295,11 +293,8 @@ static ssize_t store_dyn_interval_ms(struct kobject *kobj,
 	unsigned int val;
 
 	ret = sscanf(buf, "%u", &val);
-	if (ret != 1)
+	if (ret != 1 || val < 200)
 		return -EINVAL;
-
-	if (val < MIN_ALLOWED_INTERVAL)
-		val = MIN_ALLOWED_INTERVAL;
 
 	helper.dyn_interval_ms = val;
 
