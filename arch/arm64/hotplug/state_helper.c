@@ -20,8 +20,8 @@
 #define HELPER_ENABLED			0
 #define DYNAMIC_ENABLED			0
 #define DYN_INTERVAL_MS			500
-#define DYN_UP_THRES			75
-#define DYN_DOWN_THRES			25
+#define DYN_UP_THRES			98
+#define DYN_DOWN_THRES			49
 #define DEFAULT_MAX_CPUS_ONLINE		4
 #define DEFAULT_MIN_CPUS_ONLINE		1
 
