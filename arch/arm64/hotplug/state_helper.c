@@ -368,11 +368,8 @@ static ssize_t store_max_cpus_online(struct kobject *kobj,
 	unsigned int val;
 
 	ret = sscanf(buf, "%u", &val);
-	if (ret != 1 || val < 1)
+	if (ret != 1 || val < 0 || val > 4 || (val == 0 && num_online_cpus () == 1) || (helper.min_cpus_online == val && helper.dynamic == 1))
 		return -EINVAL;
-
-	if (val > DEFAULT_MAX_CPUS_ONLINE)
-		val = DEFAULT_MAX_CPUS_ONLINE;
 
 	if (val < helper.min_cpus_online)
 		val = helper.min_cpus_online;
@@ -399,7 +396,7 @@ static ssize_t store_min_cpus_online(struct kobject *kobj,
 	unsigned int val;
 
 	ret = sscanf(buf, "%u", &val);
-	if (ret != 1 || val < 0)
+	if (ret != 1 || val < 0 || val > 4 || (val == 0 && num_online_cpus () == 1) || (helper.max_cpus_online == val && helper.dynamic == 1))
 		return -EINVAL;
 
 	if (val > helper.max_cpus_online)
