@@ -10,13 +10,9 @@
  */
 
 #include <linux/cpu.h>
-#include <linux/device.h>
-#include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/platform_device.h>
-#include <linux/sched.h>
 #include <linux/state_helper.h>
-#include <linux/workqueue.h>
 
 #define STATE_HELPER			"state_helper"
 #define HELPER_ENABLED			0
