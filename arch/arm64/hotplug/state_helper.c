@@ -22,8 +22,8 @@
 #define DYN_INTERVAL_MS			500
 #define DYN_UP_THRES			98
 #define DYN_DOWN_THRES			49
-#define DEFAULT_MAX_CPUS_ONLINE		4
-#define DEFAULT_MIN_CPUS_ONLINE		1
+#define DEFAULT_MAX_CPUS_ONLINE		NR_CPUS
+#define DEFAULT_MIN_CPUS_ONLINE		2
 
 static struct state_helper {
 	unsigned int enabled;
@@ -52,8 +52,12 @@ static struct workqueue_struct *helper_wq;
 
 static void __ref state_helper_work (struct work_struct *work)
 {
-	if (helper.dynamic_cpus == 0)
+	if (helper.dynamic_cpus == 1)
 	{
+	   if (!cpu_online (4))
+	      cpu_up (4);
+
+
 	   if (cpu_online (3))
 	      cpu_down (3);
 	   if (cpu_online (2))
@@ -62,53 +66,164 @@ static void __ref state_helper_work (struct work_struct *work)
               cpu_down (1);
 	   if (cpu_online (0))
 	      cpu_down (0);
+
+	   if (cpu_online (7))
+	      cpu_down (7);
+	   if (cpu_online (6))
+	      cpu_down (6);
+	   if (cpu_online (5))
+	      cpu_down (5);
 	}
-	else if (helper.dynamic_cpus == 1)
+	else if (helper.dynamic_cpus == 2)
 	{
-	        if (!cpu_online (0))
-	           cpu_up (0);
+	        if (!cpu_online (4))
+	           cpu_up (4);
+	       	if (!cpu_online (5))
+		   cpu_up (5);
 	 
+
 	        if (cpu_online (3))
 	     	   cpu_down (3);
 	        if (cpu_online (2))
 	       	   cpu_down (2);
 	      	if (cpu_online (1)) 
         	   cpu_down (1);
-	}
-	else if (helper.dynamic_cpus == 2)
-	{
-	       	if (!cpu_online (0))
-	       	   cpu_up (0);
-		if (!cpu_online (1))
-	  	   cpu_up (1);
-	   
-	        if (cpu_online (3))
-	       	   cpu_down (3);
-		if (cpu_online (2))
-	      	   cpu_down (2);
+		if (cpu_online (0))
+		   cpu_down (0);
+
+		if (cpu_online (7))
+	           cpu_down (7);
+	   	if (cpu_online (6))
+		   cpu_down (6);
 	}
 	else if (helper.dynamic_cpus == 3)
 	{
-		if (!cpu_online (0))
-	       	   cpu_up (0);
-		if (!cpu_online (1))
-	   	   cpu_up (1);
-		if (!cpu_online (2))
-	  	   cpu_up (2);
+	       	if (!cpu_online (4))
+	           cpu_up (4);
+		if (!cpu_online (5))
+	           cpu_up (5);
+		if (!cpu_online (6))
+		   cpu_up (6);
 	   
-		if (cpu_online (3))
-	   	   cpu_down (3);
+
+	        if (cpu_online (3))
+	      	   cpu_down (3);
+	   	if (cpu_online (2))
+	           cpu_down (2);
+	   	if (cpu_online (1)) 
+                   cpu_down (1);
+	   	if (cpu_online (0))
+	           cpu_down (0);
+
+	   	if (cpu_online (7))
+		   cpu_down (7);
 	}
 	else if (helper.dynamic_cpus == 4)
 	{
+		if (!cpu_online (4))
+	           cpu_up (4);
+		if (!cpu_online (5))
+	           cpu_up (5);
+		if (!cpu_online (6))
+	           cpu_up (6);
+		if (!cpu_online (7))
+	           cpu_up (7);
+
+	 
+	        if (cpu_online (3))
+	      	   cpu_down (3);
+	   	if (cpu_online (2))
+	           cpu_down (2);
+	   	if (cpu_online (1)) 
+                   cpu_down (1);
+	   	if (cpu_online (0))
+		   cpu_down (0);
+	}
+	else if (helper.dynamic_cpus == 5)
+	{
+		if (!cpu_online (4))
+	           cpu_up (4);
+		if (!cpu_online (5))
+	           cpu_up (5);
+		if (!cpu_online (6))
+	           cpu_up (6);
+		if (!cpu_online (7))
+	           cpu_up (7);
+		
 		if (!cpu_online (0))
-	   	   cpu_up (0);
+	           cpu_up (0);
+	 
+
+	        if (cpu_online (3))
+	      	   cpu_down (3);
+	   	if (cpu_online (2))
+	           cpu_down (2);
+	   	if (cpu_online (1)) 
+		   cpu_down (1);
+	}
+	else if (helper.dynamic_cpus == 6)
+	{
+		if (!cpu_online (4))
+	           cpu_up (4);
+		if (!cpu_online (5))
+	           cpu_up (5);
+		if (!cpu_online (6))
+	           cpu_up (6);
+		if (!cpu_online (7))
+	           cpu_up (7);
+		
+		if (!cpu_online (0))
+	           cpu_up (0);
 		if (!cpu_online (1))
-	   	   cpu_up (1);
+	           cpu_up (1);
+	 
+
+	        if (cpu_online (3))
+	      	   cpu_down (3);
+	   	if (cpu_online (2))
+		   cpu_down (2);
+	}
+	else if (helper.dynamic_cpus == 7)
+	{
+		if (!cpu_online (4))
+	           cpu_up (4);
+		if (!cpu_online (5))
+	           cpu_up (5);
+		if (!cpu_online (6))
+	           cpu_up (6);
+		if (!cpu_online (7))
+	           cpu_up (7);
+		
+		if (!cpu_online (0))
+	           cpu_up (0);
+		if (!cpu_online (1))
+	           cpu_up (1);
 		if (!cpu_online (2))
-	   	   cpu_up (2);
+	           cpu_up (2);
+	 
+
+	        if (cpu_online (3))
+		   cpu_down (3);
+	}
+	else if (helper.dynamic_cpus == 8)
+	{
+		if (!cpu_online (4))
+	           cpu_up (4);
+		if (!cpu_online (5))
+	           cpu_up (5);
+		if (!cpu_online (6))
+	           cpu_up (6);
+		if (!cpu_online (7))
+	           cpu_up (7);
+		
+		if (!cpu_online (0))
+	           cpu_up (0);
+		if (!cpu_online (1))
+	           cpu_up (1);
+		if (!cpu_online (2))
+	           cpu_up (2);
 		if (!cpu_online (3))
-	   	   cpu_up (3);
+		   cpu_up (3);
 	}
 }
 
@@ -157,7 +272,7 @@ static void load_cpus (void)
 		helper.dynamic_cpus = req_cpus;
 	}
 
-	if (online_core_count - 4 != helper.dynamic_cpus)
+	if (online_core_count != helper.dynamic_cpus)
 	   reschedule_helper ();
 }
 
@@ -349,7 +464,7 @@ static ssize_t store_max_cpus_online (struct kobject *kobj, struct kobj_attribut
 
 	ret = sscanf(buf, "%u", &val);
 
-	if (ret != 1 || val < 0 || val > 4 || (val == 0 && num_online_cpus () == 1) || (helper.min_cpus_online == val && helper.dynamic == 1))
+	if (ret != 1 || val < 1 || val > NR_CPUS || (helper.min_cpus_online == val && helper.dynamic == 1))
 	   return -EINVAL;
 
 	if (val < helper.min_cpus_online)
@@ -374,7 +489,7 @@ static ssize_t store_min_cpus_online (struct kobject *kobj, struct kobj_attribut
 
 	ret = sscanf(buf, "%u", &val);
 
-	if (ret != 1 || val < 0 || val > 4 || (val == 0 && num_online_cpus () == 1) || (helper.max_cpus_online == val && helper.dynamic == 1))
+	if (ret != 1 || val < 1 || val > NR_CPUS || (helper.max_cpus_online == val && helper.dynamic == 1))
 	   return -EINVAL;
 
 	if (val > helper.max_cpus_online)
