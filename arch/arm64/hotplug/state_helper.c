@@ -229,7 +229,7 @@ static void __ref state_helper_work (struct work_struct *work)
 
 void reschedule_helper (void)
 {	
-	if (!helper.enabled || !is_display_on ())
+	if (!helper.enabled)
 	   return;
 
 	cancel_delayed_work_sync (&helper_work);
