@@ -30,8 +30,8 @@
 #include <linux/tick.h>
 #include <trace/events/power.h>
 
-#ifdef CONFIG_STATE_HELPER
-#include <linux/state_helper.h>
+#ifdef CONFIG_POWER_PLUG
+#include <linux/Power_Plug.h>
 #endif
 
 /**
@@ -432,11 +432,11 @@ EXPORT_SYMBOL_GPL(cpufreq_freq_transition_end);
 void cpufreq_notify_utilization (struct cpufreq_policy *policy, unsigned int util)
 {
 	if (policy)
-	#ifdef CONFIG_STATE_HELPER
+	#ifdef CONFIG_POWER_PLUG
 	{
 	#endif
 	   policy->util = util;
-	   #ifdef CONFIG_STATE_HELPER
+	   #ifdef CONFIG_POWER_PLUG
 	   load_notify ();
 	}
 	#endif

@@ -1,3 +1,7 @@
-config STATE_HELPER
-        bool "State Helper"
+config  POWER_PLUG
+        bool "PowerPlug HotPlug, for big.LITTLE SoCs"
 	default y
+	help
+		A Dynamic HotPlug (Based on State Helper Driver by 
+		Pranav Vashi (@neobuddy89)) for Octa-Core big.LITTLE SoCs, 
+		developed by Shoaib Anwar (@Shoaib0597).

@@ -537,7 +537,7 @@ static void cpufreq_interactive_timer(unsigned long data)
 
 		cpu_load = max(prev_l, pred_l);
 
-	  	#ifdef CONFIG_STATE_HELPER
+	  	#ifdef CONFIG_POWER_PLUG
 		cpufreq_notify_utilization (ppol->policy, cpu_load);
 		#endif
 

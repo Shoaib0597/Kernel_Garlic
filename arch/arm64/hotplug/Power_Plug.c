@@ -1,7 +1,8 @@
 /*
- * State Helper Driver
+ * PowerPlug HotPlug v1.0, a Dynamic HotPlug (Based on State Helper Driver) for Octa-Core big.LITTLE SoCs.
  *
- * Copyright (c) 2016, Pranav Vashi <neobuddy89@gmail.com>
+ * Copyright (c) 2016, Pranav Vashi <neobuddy89@gmail.com>.
+ * Copyright (c) 2017, Shoaib Anwar <Shoaib0595@gmail.com>.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -12,21 +13,21 @@
 #include <linux/cpu.h>
 #include <linux/module.h>
 #include <linux/cpufreq.h>
-#include <linux/state_helper.h>
+#include <linux/Power_Plug.h>
 #include <linux/display_state.h>
 #include <linux/platform_device.h>
 
-#define STATE_HELPER			"state_helper"
-#define HELPER_ENABLED			0
-#define DYNAMIC_ENABLED			0
+#define POWER_PLUG			"power_plug"
+#define HOTPLUG_TOGGLE			0
+#define DYNAMIC_TOGGLE			0
 #define DYN_INTERVAL_MS			500
 #define DYN_UP_THRES			98
 #define DYN_DOWN_THRES			49
 #define DEFAULT_MAX_CPUS_ONLINE		NR_CPUS
 #define DEFAULT_MIN_CPUS_ONLINE		2
 
-static struct state_helper {
-	unsigned int enabled;
+static struct power_plug {
+	unsigned int toggle;
 	unsigned int dynamic;
 	unsigned int dyn_interval_ms;
 	unsigned int dyn_up_threshold;
@@ -34,9 +35,9 @@ static struct state_helper {
 	unsigned int max_cpus_online;
 	unsigned int min_cpus_online;
 	unsigned int dynamic_cpus;
-} helper = {
-	.enabled = HELPER_ENABLED,
-	.dynamic = DYNAMIC_ENABLED,
+} hotplug = {
+	.toggle = HOTPLUG_TOGGLE,
+	.dynamic = DYNAMIC_TOGGLE,
 	.dyn_interval_ms = DYN_INTERVAL_MS,
 	.dyn_up_threshold = DYN_UP_THRES,
 	.dyn_down_threshold = DYN_DOWN_THRES,
@@ -47,12 +48,12 @@ static struct state_helper {
 
 static u64 last_load_time;
 
-static struct delayed_work helper_work;
-static struct workqueue_struct *helper_wq;
+static struct delayed_work hotplug_work;
+static struct workqueue_struct *hotplug_wq;
 
-static void __ref state_helper_work (struct work_struct *work)
+static void __ref power_plug_work (struct work_struct *work)
 {
-	if (helper.dynamic_cpus == 1)
+	if (hotplug.dynamic_cpus == 1)
 	{
 	   if (!cpu_online (4))
 	      cpu_up (4);
@@ -74,7 +75,7 @@ static void __ref state_helper_work (struct work_struct *work)
 	   if (cpu_online (5))
 	      cpu_down (5);
 	}
-	else if (helper.dynamic_cpus == 2)
+	else if (hotplug.dynamic_cpus == 2)
 	{
 	        if (!cpu_online (4))
 	           cpu_up (4);
@@ -96,7 +97,7 @@ static void __ref state_helper_work (struct work_struct *work)
 	   	if (cpu_online (6))
 		   cpu_down (6);
 	}
-	else if (helper.dynamic_cpus == 3)
+	else if (hotplug.dynamic_cpus == 3)
 	{
 	       	if (!cpu_online (4))
 	           cpu_up (4);
@@ -118,7 +119,7 @@ static void __ref state_helper_work (struct work_struct *work)
 	   	if (cpu_online (7))
 		   cpu_down (7);
 	}
-	else if (helper.dynamic_cpus == 4)
+	else if (hotplug.dynamic_cpus == 4)
 	{
 		if (!cpu_online (4))
 	           cpu_up (4);
@@ -139,7 +140,7 @@ static void __ref state_helper_work (struct work_struct *work)
 	   	if (cpu_online (0))
 		   cpu_down (0);
 	}
-	else if (helper.dynamic_cpus == 5)
+	else if (hotplug.dynamic_cpus == 5)
 	{
 		if (!cpu_online (4))
 	           cpu_up (4);
@@ -161,7 +162,7 @@ static void __ref state_helper_work (struct work_struct *work)
 	   	if (cpu_online (1)) 
 		   cpu_down (1);
 	}
-	else if (helper.dynamic_cpus == 6)
+	else if (hotplug.dynamic_cpus == 6)
 	{
 		if (!cpu_online (4))
 	           cpu_up (4);
@@ -183,7 +184,7 @@ static void __ref state_helper_work (struct work_struct *work)
 	   	if (cpu_online (2))
 		   cpu_down (2);
 	}
-	else if (helper.dynamic_cpus == 7)
+	else if (hotplug.dynamic_cpus == 7)
 	{
 		if (!cpu_online (4))
 	           cpu_up (4);
@@ -205,7 +206,7 @@ static void __ref state_helper_work (struct work_struct *work)
 	        if (cpu_online (3))
 		   cpu_down (3);
 	}
-	else if (helper.dynamic_cpus == 8)
+	else if (hotplug.dynamic_cpus == 8)
 	{
 		if (!cpu_online (4))
 	           cpu_up (4);
@@ -227,13 +228,13 @@ static void __ref state_helper_work (struct work_struct *work)
 	}
 }
 
-void reschedule_helper (void)
+void reschedule_hotplug (void)
 {	
-	if (!helper.enabled)
+	if (!hotplug.toggle)
 	   return;
 
-	cancel_delayed_work_sync (&helper_work);
-	queue_delayed_work (helper_wq, &helper_work, msecs_to_jiffies (100));
+	cancel_delayed_work_sync (&hotplug_work);
+	queue_delayed_work (hotplug_wq, &hotplug_work, msecs_to_jiffies (100));
 }
 
 static void load_cpus (void)
@@ -253,75 +254,75 @@ static void load_cpus (void)
 
 	avg_load = avg_load / online_core_count;
 
-	if (avg_load >= helper.dyn_up_threshold) 
+	if (avg_load >= hotplug.dyn_up_threshold) 
 	{
-	   req_cpus = helper.dynamic_cpus + 1;
+	   req_cpus = hotplug.dynamic_cpus + 1;
 
-	   if (req_cpus > helper.max_cpus_online)
-	      req_cpus = helper.max_cpus_online;
+	   if (req_cpus > hotplug.max_cpus_online)
+	      req_cpus = hotplug.max_cpus_online;
 
-	   helper.dynamic_cpus = req_cpus;
+	   hotplug.dynamic_cpus = req_cpus;
 	} 
-	else if (avg_load <= helper.dyn_down_threshold) 
+	else if (avg_load <= hotplug.dyn_down_threshold) 
 	{
-		req_cpus = helper.dynamic_cpus - 1;
+		req_cpus = hotplug.dynamic_cpus - 1;
 
-		if (req_cpus < helper.min_cpus_online)
-		   req_cpus = helper.min_cpus_online;
+		if (req_cpus < hotplug.min_cpus_online)
+		   req_cpus = hotplug.min_cpus_online;
 
-		helper.dynamic_cpus = req_cpus;
+		hotplug.dynamic_cpus = req_cpus;
 	}
 
-	if (online_core_count != helper.dynamic_cpus)
-	   reschedule_helper ();
+	if (online_core_count != hotplug.dynamic_cpus)
+	   reschedule_hotplug ();
 }
 
 void load_notify ()
 {
 	u64 now;
 
-	if (!helper.enabled || !helper.dynamic || !is_display_on ()) 
+	if (!hotplug.toggle || !hotplug.dynamic || !is_display_on ()) 
 	{
-	   helper.dynamic_cpus = helper.max_cpus_online;
+	   hotplug.dynamic_cpus = hotplug.max_cpus_online;
 	   last_load_time = ktime_to_us (ktime_get ());
 	   return;
 	}
 
 	now = ktime_to_us (ktime_get ());
 
-	if (now - last_load_time < helper.dyn_interval_ms * USEC_PER_MSEC)
+	if (now - last_load_time < hotplug.dyn_interval_ms * USEC_PER_MSEC)
 	   return;
 
 	last_load_time = ktime_to_us (ktime_get ());
 	load_cpus ();
 }
 
-static void state_helper_start (void)
+static void power_plug_start (void)
 {
-	helper_wq = alloc_workqueue ("state_helper_wq", WQ_HIGHPRI | WQ_FREEZABLE, 0);
+	hotplug_wq = alloc_workqueue ("power_plug_wq", WQ_HIGHPRI | WQ_FREEZABLE, 0);
 	
-	if (!helper_wq) 
+	if (!hotplug_wq) 
 	{
-	   pr_err ("%s: Failed to Allocate Helper WorkQueue\n", STATE_HELPER);
+	   pr_err ("%s: Failed to Allocate Helper WorkQueue\n", POWER_PLUG);
 	   goto err_out;
 	}
 
-	INIT_DELAYED_WORK (&helper_work, state_helper_work);
-	reschedule_helper ();
+	INIT_DELAYED_WORK (&hotplug_work, power_plug_work);
+	reschedule_hotplug ();
 
 	return;
 
 err_out:
-	helper.enabled = 0;
+	hotplug.toggle = 0;
 	return;
 }
 
-static void __ref state_helper_stop (void)
+static void __ref power_plug_stop (void)
 {
 	int cpu;
 
-	flush_workqueue (helper_wq);
-	cancel_delayed_work_sync (&helper_work);
+	flush_workqueue (hotplug_wq);
+	cancel_delayed_work_sync (&hotplug_work);
 
 	// Wake-Up all Cores
 	for_each_possible_cpu (cpu)
@@ -330,12 +331,12 @@ static void __ref state_helper_stop (void)
 }
 
 // sysFS Interface Begins Here---
-static ssize_t show_enabled (struct kobject *kobj, struct kobj_attribute *attr, char *buf)
+static ssize_t show_toggle (struct kobject *kobj, struct kobj_attribute *attr, char *buf)
 {
-	return sprintf (buf, "%u\n", helper.enabled);
+	return sprintf (buf, "%u\n", hotplug.toggle);
 }
 
-static ssize_t store_enabled (struct kobject *kobj, struct kobj_attribute *attr, const char *buf, size_t count)
+static ssize_t store_toggle (struct kobject *kobj, struct kobj_attribute *attr, const char *buf, size_t count)
 {
 	int ret;
 	unsigned int val;
@@ -345,22 +346,22 @@ static ssize_t store_enabled (struct kobject *kobj, struct kobj_attribute *attr,
 	if (ret != 1 || val < 0 || val > 1)
 	   return -EINVAL;
 
-	if (val == helper.enabled)
+	if (val == hotplug.toggle)
 	   return count;
 
-	helper.enabled = val;
+	hotplug.toggle = val;
 
-	if (helper.enabled)
-	   state_helper_start ();
+	if (hotplug.toggle)
+	   power_plug_start ();
 	else
-	    state_helper_stop ();
+	    power_plug_stop ();
 
 	return count;
 }
 
 static ssize_t show_dynamic (struct kobject *kobj, struct kobj_attribute *attr, char *buf)
 {
-	return sprintf (buf, "%u\n", helper.dynamic);
+	return sprintf (buf, "%u\n", hotplug.dynamic);
 }
 
 static ssize_t store_dynamic (struct kobject *kobj, struct kobj_attribute *attr, const char *buf, size_t count)
@@ -373,22 +374,22 @@ static ssize_t store_dynamic (struct kobject *kobj, struct kobj_attribute *attr,
 	if (ret != 1 || val < 0 || val > 1)
 	   return -EINVAL;
 
-	if (val == helper.dynamic)
+	if (val == hotplug.dynamic)
 	   return count;
 
-	helper.dynamic = val;
+	hotplug.dynamic = val;
 
-	if (!helper.dynamic)
-	   helper.dynamic_cpus = helper.max_cpus_online;
+	if (!hotplug.dynamic)
+	   hotplug.dynamic_cpus = hotplug.max_cpus_online;
 
-	reschedule_helper ();
+	reschedule_hotplug ();
 
 	return count;
 }
 
 static ssize_t show_dyn_interval_ms (struct kobject *kobj, struct kobj_attribute *attr, char *buf)
 {
-	return sprintf (buf, "%u\n", helper.dyn_interval_ms);
+	return sprintf (buf, "%u\n", hotplug.dyn_interval_ms);
 }
 
 static ssize_t store_dyn_interval_ms (struct kobject *kobj, struct kobj_attribute *attr, const char *buf, size_t count)
@@ -401,14 +402,14 @@ static ssize_t store_dyn_interval_ms (struct kobject *kobj, struct kobj_attribut
 	if (ret != 1 || val < 200)
 	   return -EINVAL;
 
-	helper.dyn_interval_ms = val;
+	hotplug.dyn_interval_ms = val;
 
 	return count;
 }
 
 static ssize_t show_dyn_up_threshold (struct kobject *kobj, struct kobj_attribute *attr, char *buf)
 {
-	return sprintf (buf, "%u\n", helper.dyn_up_threshold);
+	return sprintf (buf, "%u\n", hotplug.dyn_up_threshold);
 }
 
 static ssize_t store_dyn_up_threshold (struct kobject *kobj, struct kobj_attribute *attr, const char *buf, size_t count)
@@ -421,17 +422,17 @@ static ssize_t store_dyn_up_threshold (struct kobject *kobj, struct kobj_attribu
 	if (ret != 1 || val > 100)
 	   return -EINVAL;
 
-	if (val <= helper.dyn_down_threshold)
-	   val = helper.dyn_down_threshold + 1;
+	if (val <= hotplug.dyn_down_threshold)
+	   val = hotplug.dyn_down_threshold + 1;
 
-	helper.dyn_up_threshold = val;
+	hotplug.dyn_up_threshold = val;
 
 	return count;
 }
 
 static ssize_t show_dyn_down_threshold (struct kobject *kobj, struct kobj_attribute *attr, char *buf)
 {
-	return sprintf (buf, "%u\n", helper.dyn_down_threshold);
+	return sprintf (buf, "%u\n", hotplug.dyn_down_threshold);
 }
 
 static ssize_t store_dyn_down_threshold (struct kobject *kobj, struct kobj_attribute *attr, const char *buf, size_t count)
@@ -444,17 +445,17 @@ static ssize_t store_dyn_down_threshold (struct kobject *kobj, struct kobj_attri
 	if (ret != 1 || val < 0)
 	   return -EINVAL;
 
-	if (val >= helper.dyn_up_threshold)
-	   val = helper.dyn_up_threshold - 1;
+	if (val >= hotplug.dyn_up_threshold)
+	   val = hotplug.dyn_up_threshold - 1;
 
-	helper.dyn_down_threshold = val;
+	hotplug.dyn_down_threshold = val;
 
 	return count;
 }
 
 static ssize_t show_max_cpus_online (struct kobject *kobj, struct kobj_attribute *attr, char *buf)
 {
-	return sprintf (buf, "%u\n", helper.max_cpus_online);
+	return sprintf (buf, "%u\n", hotplug.max_cpus_online);
 }
 
 static ssize_t store_max_cpus_online (struct kobject *kobj, struct kobj_attribute *attr, const char *buf, size_t count)
@@ -464,22 +465,22 @@ static ssize_t store_max_cpus_online (struct kobject *kobj, struct kobj_attribut
 
 	ret = sscanf(buf, "%u", &val);
 
-	if (ret != 1 || val < 1 || val > NR_CPUS || (helper.min_cpus_online == val && helper.dynamic == 1))
+	if (ret != 1 || val < 1 || val > NR_CPUS || (hotplug.min_cpus_online == val && hotplug.dynamic == 1))
 	   return -EINVAL;
 
-	if (val < helper.min_cpus_online)
-	   val = helper.min_cpus_online;
+	if (val < hotplug.min_cpus_online)
+	   val = hotplug.min_cpus_online;
 
-	helper.max_cpus_online = val;
+	hotplug.max_cpus_online = val;
 
-	reschedule_helper ();
+	reschedule_hotplug ();
 
 	return count;
 }
 
 static ssize_t show_min_cpus_online (struct kobject *kobj, struct kobj_attribute *attr, char *buf)
 {
-	return sprintf (buf, "%u\n", helper.min_cpus_online);
+	return sprintf (buf, "%u\n", hotplug.min_cpus_online);
 }
 
 static ssize_t store_min_cpus_online (struct kobject *kobj, struct kobj_attribute *attr, const char *buf, size_t count)
@@ -489,18 +490,18 @@ static ssize_t store_min_cpus_online (struct kobject *kobj, struct kobj_attribut
 
 	ret = sscanf(buf, "%u", &val);
 
-	if (ret != 1 || val < 1 || val > NR_CPUS || (helper.max_cpus_online == val && helper.dynamic == 1))
+	if (ret != 1 || val < 1 || val > NR_CPUS || (hotplug.max_cpus_online == val && hotplug.dynamic == 1))
 	   return -EINVAL;
 
-	if (val > helper.max_cpus_online)
-	   val = helper.max_cpus_online;
+	if (val > hotplug.max_cpus_online)
+	   val = hotplug.max_cpus_online;
 
-	if (val == helper.min_cpus_online)
+	if (val == hotplug.min_cpus_online)
 	   return count;
 
-	helper.min_cpus_online = val;
+	hotplug.min_cpus_online = val;
 
-	if (!helper.enabled || !helper.dynamic)
+	if (!hotplug.toggle || !hotplug.dynamic)
 	   return count;
 
 	last_load_time = ktime_to_us (ktime_get ());
@@ -517,7 +518,7 @@ static struct kobj_attribute _name##_attr = 		\
 static struct kobj_attribute _name##_attr = 		\
 	__ATTR(_name, 0444, show_##_name, NULL)
 
-KERNEL_ATTR_RW (enabled);
+KERNEL_ATTR_RW (toggle);
 KERNEL_ATTR_RW (dynamic);
 KERNEL_ATTR_RW (dyn_interval_ms);
 KERNEL_ATTR_RW (dyn_up_threshold);
@@ -525,8 +526,8 @@ KERNEL_ATTR_RW (dyn_down_threshold);
 KERNEL_ATTR_RW (max_cpus_online);
 KERNEL_ATTR_RW (min_cpus_online);
 
-static struct attribute *state_helper_attrs[] = {
-	&enabled_attr.attr,
+static struct attribute *power_plug_attrs[] = {
+	&toggle_attr.attr,
 	&dynamic_attr.attr,
 	&dyn_interval_ms_attr.attr,
 	&dyn_up_threshold_attr.attr,
@@ -537,79 +538,79 @@ static struct attribute *state_helper_attrs[] = {
 };
 
 static struct attribute_group attr_group = {
-	.attrs = state_helper_attrs,
-	.name = STATE_HELPER,
+	.attrs = power_plug_attrs,
+	.name = POWER_PLUG,
 };
 // sysFS Interface Ends Here.
 
-static int state_helper_probe (struct platform_device *pdev)
+static int power_plug_probe (struct platform_device *pdev)
 {
 	int ret = 0;
 
 	ret = sysfs_create_group (kernel_kobj, &attr_group);
 
-	if (helper.enabled)
-	   state_helper_start ();
+	if (hotplug.toggle)
+	   power_plug_start ();
 
 	return ret;
 }
 
-static struct platform_device state_helper_device = {
-	.name = STATE_HELPER,
+static struct platform_device power_plug_device = {
+	.name = POWER_PLUG,
 	.id = -1,
 };
 
-static int state_helper_remove (struct platform_device *pdev)
+static int power_plug_remove (struct platform_device *pdev)
 {
-	if (helper.enabled)
-	   state_helper_stop();
+	if (hotplug.toggle)
+	   power_plug_stop();
 
 	return 0;
 }
 
-static struct platform_driver state_helper_driver = {
-	.probe = state_helper_probe,
-	.remove = state_helper_remove,
+static struct platform_driver power_plug_driver = {
+	.probe = power_plug_probe,
+	.remove = power_plug_remove,
 	.driver = {
-		.name = STATE_HELPER,
+		.name = POWER_PLUG,
 		.owner = THIS_MODULE,
 	},
 };
 
-static int __init state_helper_init (void)
+static int __init power_plug_init (void)
 {
 	int ret;
 
-	ret = platform_driver_register (&state_helper_driver);
+	ret = platform_driver_register (&power_plug_driver);
 	
 	if (ret) 
 	{
-	   pr_err ("%s: Driver-Register Failed: %d\n", STATE_HELPER, ret);
+	   pr_err ("%s: Driver-Register Failed: %d\n", POWER_PLUG, ret);
 	   return ret;
 	}
 
-	ret = platform_device_register(&state_helper_device);
+	ret = platform_device_register(&power_plug_device);
 
 	if (ret) 
 	{
-	   pr_err ("%s: Device-Register Failed: %d\n", STATE_HELPER, ret);
+	   pr_err ("%s: Device-Register Failed: %d\n", POWER_PLUG, ret);
 	   return ret;
 	}
 
-	pr_info ("%s: Device Initialized\n", STATE_HELPER);
+	pr_info ("%s: Device Initialized\n", POWER_PLUG);
 
 	return ret;
 }
 
-static void __exit state_helper_exit (void)
+static void __exit power_plug_exit (void)
 {
-	platform_device_unregister (&state_helper_device);
-	platform_driver_unregister (&state_helper_driver);
+	platform_device_unregister (&power_plug_device);
+	platform_driver_unregister (&power_plug_driver);
 }
 
-late_initcall (state_helper_init);
-module_exit (state_helper_exit);
+late_initcall (power_plug_init);
+module_exit (power_plug_exit);
 
-MODULE_AUTHOR ("Pranav Vashi <neobuddy89@gmail.com>");
-MODULE_DESCRIPTION ("State Helper Driver");
+MODULE_AUTHOR ("Pranav Vashi <neobuddy89@gmail.com> and Shoaib Anwar <Shoaib0595@gmail.com>");
+MODULE_DESCRIPTION ("PowerPlug HotPlug");
 MODULE_LICENSE ("GPL v2");

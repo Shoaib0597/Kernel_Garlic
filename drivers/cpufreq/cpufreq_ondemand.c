@@ -159,7 +159,7 @@ static void od_check_cpu(int cpu, unsigned int load)
 	struct dbs_data *dbs_data = policy->governor_data;
 	struct od_dbs_tuners *od_tuners = dbs_data->tuners;
 
-	#ifdef CONFIG_STATE_HELPER
+	#ifdef CONFIG_POWER_PLUG
 	cpufreq_notify_utilization (policy, load);
 	#endif
 

@@ -1,1 +1,1 @@
-obj-$(CONFIG_STATE_HELPER)		  += state_helper.o
+obj-$(CONFIG_POWER_PLUG)	+=	Power_Plug.o
