@@ -380,9 +380,10 @@ static ssize_t store_dynamic (struct kobject *kobj, struct kobj_attribute *attr,
 	hotplug.dynamic = val;
 
 	if (!hotplug.dynamic)
+	{
 	   hotplug.dynamic_cpus = hotplug.max_cpus_online;
-
-	reschedule_hotplug ();
+	   reschedule_hotplug ();
+	}
 
 	return count;
 }
