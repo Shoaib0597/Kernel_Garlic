@@ -53,178 +53,357 @@ static struct workqueue_struct *hotplug_wq;
 
 static void __ref power_plug_work (struct work_struct *work)
 {
-	if (hotplug.dynamic_cpus == 1)
+	if (hotplug.dynamic)
 	{
-	   if (!cpu_online (4))
-	      cpu_up (4);
+	   if (hotplug.dynamic_cpus == 1)
+	   {
+	      if (!cpu_online (4))
+	         cpu_up (4);
 
 
-	   if (cpu_online (3))
-	      cpu_down (3);
-	   if (cpu_online (2))
-	      cpu_down (2);
-	   if (cpu_online (1)) 
-              cpu_down (1);
-	   if (cpu_online (0))
-	      cpu_down (0);
+	      if (cpu_online (3))
+	         cpu_down (3);
+	      if (cpu_online (2))
+	         cpu_down (2);
+	      if (cpu_online (1)) 
+                 cpu_down (1);
+	      if (cpu_online (0))
+	         cpu_down (0);
 
-	   if (cpu_online (7))
-	      cpu_down (7);
-	   if (cpu_online (6))
-	      cpu_down (6);
-	   if (cpu_online (5))
-	      cpu_down (5);
-	}
-	else if (hotplug.dynamic_cpus == 2)
-	{
-	        if (!cpu_online (4))
-	           cpu_up (4);
-	       	if (!cpu_online (5))
-		   cpu_up (5);
+	      if (cpu_online (7))
+	         cpu_down (7);
+	      if (cpu_online (6))
+	         cpu_down (6);
+	      if (cpu_online (5))
+	         cpu_down (5);
+	   }
+	   else if (hotplug.dynamic_cpus == 2)
+	   {
+	           if (!cpu_online (4))
+	              cpu_up (4);
+	       	   if (!cpu_online (5))
+		      cpu_up (5);
 	 
 
-	        if (cpu_online (3))
-	     	   cpu_down (3);
-	        if (cpu_online (2))
-	       	   cpu_down (2);
-	      	if (cpu_online (1)) 
-        	   cpu_down (1);
-		if (cpu_online (0))
-		   cpu_down (0);
+	           if (cpu_online (3))
+	     	      cpu_down (3);
+	           if (cpu_online (2))
+	       	      cpu_down (2);
+	      	   if (cpu_online (1)) 
+        	      cpu_down (1);
+		   if (cpu_online (0))
+		      cpu_down (0);
 
-		if (cpu_online (7))
-	           cpu_down (7);
-	   	if (cpu_online (6))
-		   cpu_down (6);
-	}
-	else if (hotplug.dynamic_cpus == 3)
-	{
-	       	if (!cpu_online (4))
-	           cpu_up (4);
-		if (!cpu_online (5))
-	           cpu_up (5);
-		if (!cpu_online (6))
-		   cpu_up (6);
+		   if (cpu_online (7))
+	              cpu_down (7);
+	   	   if (cpu_online (6))
+		      cpu_down (6);
+	   }
+	   else if (hotplug.dynamic_cpus == 3)
+	   {
+	           if (!cpu_online (4))
+	              cpu_up (4);
+		   if (!cpu_online (5))
+	              cpu_up (5);
+		   if (!cpu_online (6))
+		      cpu_up (6);
 	   
 
-	        if (cpu_online (3))
-	      	   cpu_down (3);
-	   	if (cpu_online (2))
-	           cpu_down (2);
-	   	if (cpu_online (1)) 
-                   cpu_down (1);
-	   	if (cpu_online (0))
-	           cpu_down (0);
+	           if (cpu_online (3))
+	      	      cpu_down (3);
+	   	   if (cpu_online (2))
+	              cpu_down (2);
+	   	   if (cpu_online (1)) 
+                      cpu_down (1);
+	   	   if (cpu_online (0))
+	              cpu_down (0);
 
-	   	if (cpu_online (7))
-		   cpu_down (7);
-	}
-	else if (hotplug.dynamic_cpus == 4)
-	{
-		if (!cpu_online (4))
-	           cpu_up (4);
-		if (!cpu_online (5))
-	           cpu_up (5);
-		if (!cpu_online (6))
-	           cpu_up (6);
-		if (!cpu_online (7))
-	           cpu_up (7);
+	   	   if (cpu_online (7))
+		      cpu_down (7);
+	   }
+	   else if (hotplug.dynamic_cpus == 4)
+	   {
+		   if (!cpu_online (4))
+	              cpu_up (4);
+		   if (!cpu_online (5))
+	              cpu_up (5);
+		   if (!cpu_online (6))
+	              cpu_up (6);
+		   if (!cpu_online (7))
+	              cpu_up (7);
 
 	 
-	        if (cpu_online (3))
-	      	   cpu_down (3);
-	   	if (cpu_online (2))
-	           cpu_down (2);
-	   	if (cpu_online (1)) 
-                   cpu_down (1);
-	   	if (cpu_online (0))
-		   cpu_down (0);
-	}
-	else if (hotplug.dynamic_cpus == 5)
-	{
-		if (!cpu_online (4))
-	           cpu_up (4);
-		if (!cpu_online (5))
-	           cpu_up (5);
-		if (!cpu_online (6))
-	           cpu_up (6);
-		if (!cpu_online (7))
-	           cpu_up (7);
+	           if (cpu_online (3))
+	      	      cpu_down (3);
+	   	   if (cpu_online (2))
+	              cpu_down (2);
+	   	   if (cpu_online (1)) 
+                      cpu_down (1);
+	   	   if (cpu_online (0))
+		      cpu_down (0);
+	   }
+	   else if (hotplug.dynamic_cpus == 5)
+	   {
+		   if (!cpu_online (4))
+	              cpu_up (4);
+		   if (!cpu_online (5))
+	              cpu_up (5);
+		   if (!cpu_online (6))
+	              cpu_up (6);
+		   if (!cpu_online (7))
+	              cpu_up (7);
 		
-		if (!cpu_online (0))
-	           cpu_up (0);
+		   if (!cpu_online (0))
+	              cpu_up (0);
 	 
 
-	        if (cpu_online (3))
-	      	   cpu_down (3);
-	   	if (cpu_online (2))
-	           cpu_down (2);
-	   	if (cpu_online (1)) 
-		   cpu_down (1);
-	}
-	else if (hotplug.dynamic_cpus == 6)
-	{
-		if (!cpu_online (4))
-	           cpu_up (4);
-		if (!cpu_online (5))
-	           cpu_up (5);
-		if (!cpu_online (6))
-	           cpu_up (6);
-		if (!cpu_online (7))
-	           cpu_up (7);
+	           if (cpu_online (3))
+	      	      cpu_down (3);
+	   	   if (cpu_online (2))
+	              cpu_down (2);
+	   	   if (cpu_online (1)) 
+		      cpu_down (1);
+	   }
+	   else if (hotplug.dynamic_cpus == 6)
+	   {
+		   if (!cpu_online (4))
+	              cpu_up (4);
+		   if (!cpu_online (5))
+	              cpu_up (5);
+		   if (!cpu_online (6))
+	              cpu_up (6);
+		   if (!cpu_online (7))
+	              cpu_up (7);
 		
-		if (!cpu_online (0))
-	           cpu_up (0);
-		if (!cpu_online (1))
-	           cpu_up (1);
+		   if (!cpu_online (0))
+	              cpu_up (0);
+		   if (!cpu_online (1))
+	              cpu_up (1);
 	 
 
-	        if (cpu_online (3))
-	      	   cpu_down (3);
-	   	if (cpu_online (2))
-		   cpu_down (2);
-	}
-	else if (hotplug.dynamic_cpus == 7)
-	{
-		if (!cpu_online (4))
-	           cpu_up (4);
-		if (!cpu_online (5))
-	           cpu_up (5);
-		if (!cpu_online (6))
-	           cpu_up (6);
-		if (!cpu_online (7))
-	           cpu_up (7);
+	           if (cpu_online (3))
+	      	      cpu_down (3);
+	   	   if (cpu_online (2))
+		      cpu_down (2);
+	   }
+	   else if (hotplug.dynamic_cpus == 7)
+	   {
+		   if (!cpu_online (4))
+	              cpu_up (4);
+		   if (!cpu_online (5))
+	              cpu_up (5);
+		   if (!cpu_online (6))
+	              cpu_up (6);
+		   if (!cpu_online (7))
+	              cpu_up (7);
 		
-		if (!cpu_online (0))
-	           cpu_up (0);
-		if (!cpu_online (1))
-	           cpu_up (1);
-		if (!cpu_online (2))
-	           cpu_up (2);
+		   if (!cpu_online (0))
+	              cpu_up (0);
+		   if (!cpu_online (1))
+	              cpu_up (1);
+		   if (!cpu_online (2))
+	              cpu_up (2);
 	 
 
-	        if (cpu_online (3))
-		   cpu_down (3);
-	}
-	else if (hotplug.dynamic_cpus == 8)
-	{
-		if (!cpu_online (4))
-	           cpu_up (4);
-		if (!cpu_online (5))
-	           cpu_up (5);
-		if (!cpu_online (6))
-	           cpu_up (6);
-		if (!cpu_online (7))
-	           cpu_up (7);
+	           if (cpu_online (3))
+		      cpu_down (3);
+	   }
+	   else if (hotplug.dynamic_cpus == 8)
+	   {
+		   if (!cpu_online (4))
+	              cpu_up (4);
+		   if (!cpu_online (5))
+	              cpu_up (5);
+		   if (!cpu_online (6))
+	              cpu_up (6);
+		   if (!cpu_online (7))
+	              cpu_up (7);
 		
-		if (!cpu_online (0))
-	           cpu_up (0);
-		if (!cpu_online (1))
-	           cpu_up (1);
-		if (!cpu_online (2))
-	           cpu_up (2);
-		if (!cpu_online (3))
-		   cpu_up (3);
+		   if (!cpu_online (0))
+	              cpu_up (0);
+		   if (!cpu_online (1))
+	              cpu_up (1);
+		   if (!cpu_online (2))
+	              cpu_up (2);
+		   if (!cpu_online (3))
+		      cpu_up (3);
+	   }
+	}
+	else
+	{
+	    if (hotplug.max_cpus_online == 1)
+	    {
+	       if (!cpu_online (4))
+	          cpu_up (4);
+
+
+	       if (cpu_online (3))
+	          cpu_down (3);
+	       if (cpu_online (2))
+	          cpu_down (2);
+	       if (cpu_online (1)) 
+                  cpu_down (1);
+	       if (cpu_online (0))
+	          cpu_down (0);
+
+	       if (cpu_online (7))
+	          cpu_down (7);
+	       if (cpu_online (6))
+	          cpu_down (6);
+	       if (cpu_online (5))
+	          cpu_down (5);
+	    }
+	    else if (hotplug.max_cpus_online == 2)
+	    {
+	            if (!cpu_online (4))
+	               cpu_up (4);
+	       	    if (!cpu_online (5))
+		       cpu_up (5);
+	 
+
+	            if (cpu_online (3))
+	     	       cpu_down (3);
+	            if (cpu_online (2))
+	       	       cpu_down (2);
+	      	    if (cpu_online (1)) 
+        	       cpu_down (1);
+		    if (cpu_online (0))
+		       cpu_down (0);
+
+		    if (cpu_online (7))
+	               cpu_down (7);
+	   	    if (cpu_online (6))
+		       cpu_down (6);
+	    }
+	    else if (hotplug.max_cpus_online == 3)
+	    {
+	       	    if (!cpu_online (4))
+	               cpu_up (4);
+		    if (!cpu_online (5))
+	               cpu_up (5);
+		    if (!cpu_online (6))
+		       cpu_up (6);
+	   
+
+	            if (cpu_online (3))
+	      	       cpu_down (3);
+	   	    if (cpu_online (2))
+	               cpu_down (2);
+	   	    if (cpu_online (1)) 
+                       cpu_down (1);
+	   	    if (cpu_online (0))
+	               cpu_down (0);
+
+	   	    if (cpu_online (7))
+		       cpu_down (7);
+	    }
+	    else if (hotplug.max_cpus_online == 4)
+	    {
+		    if (!cpu_online (4))
+	               cpu_up (4);
+		    if (!cpu_online (5))
+	               cpu_up (5);
+		    if (!cpu_online (6))
+	               cpu_up (6);
+		    if (!cpu_online (7))
+	               cpu_up (7);
+
+	 
+	            if (cpu_online (3))
+	      	       cpu_down (3);
+	   	    if (cpu_online (2))
+	               cpu_down (2);
+	   	    if (cpu_online (1)) 
+                       cpu_down (1);
+	   	    if (cpu_online (0))
+		       cpu_down (0);
+	    }
+	    else if (hotplug.max_cpus_online == 5)
+	    {
+		    if (!cpu_online (4))
+	               cpu_up (4);
+		    if (!cpu_online (5))
+	               cpu_up (5);
+		    if (!cpu_online (6))
+	               cpu_up (6);
+		    if (!cpu_online (7))
+	               cpu_up (7);
+		
+		    if (!cpu_online (0))
+	               cpu_up (0);
+	 
+
+	            if (cpu_online (3))
+	      	       cpu_down (3);
+	   	    if (cpu_online (2))
+	               cpu_down (2);
+	   	    if (cpu_online (1)) 
+		       cpu_down (1);
+	    }
+	    else if (hotplug.max_cpus_online == 6)
+	    {
+		    if (!cpu_online (4))
+	               cpu_up (4);
+		    if (!cpu_online (5))
+	               cpu_up (5);
+		    if (!cpu_online (6))
+	               cpu_up (6);
+		    if (!cpu_online (7))
+	               cpu_up (7);
+		
+		    if (!cpu_online (0))
+	               cpu_up (0);
+		    if (!cpu_online (1))
+	               cpu_up (1);
+	 
+
+	            if (cpu_online (3))
+	      	       cpu_down (3);
+	   	    if (cpu_online (2))
+		       cpu_down (2);
+	    }
+	    else if (hotplug.max_cpus_online == 7)
+	    {
+		    if (!cpu_online (4))
+	               cpu_up (4);
+		    if (!cpu_online (5))
+	               cpu_up (5);
+		    if (!cpu_online (6))
+	               cpu_up (6);
+		    if (!cpu_online (7))
+	               cpu_up (7);
+		
+		    if (!cpu_online (0))
+	               cpu_up (0);
+		    if (!cpu_online (1))
+	               cpu_up (1);
+		    if (!cpu_online (2))
+	               cpu_up (2);
+	 
+
+	            if (cpu_online (3))
+		       cpu_down (3);
+	    }
+	    else if (hotplug.max_cpus_online == 8)
+	    {
+		    if (!cpu_online (4))
+	               cpu_up (4);
+		    if (!cpu_online (5))
+	               cpu_up (5);
+		    if (!cpu_online (6))
+	               cpu_up (6);
+		    if (!cpu_online (7))
+	               cpu_up (7);
+		
+		    if (!cpu_online (0))
+	               cpu_up (0);
+		    if (!cpu_online (1))
+	               cpu_up (1);
+		    if (!cpu_online (2))
+	               cpu_up (2);
+		    if (!cpu_online (3))
+		       cpu_up (3);
+	    }
 	}
 }
 
