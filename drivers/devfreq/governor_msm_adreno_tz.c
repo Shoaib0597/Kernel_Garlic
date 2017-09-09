@@ -22,7 +22,7 @@
 #include <linux/msm_adreno_devfreq.h>
 #include <asm/cacheflush.h>
 #include <soc/qcom/scm.h>
-#include <linux/powersuspend.h>
+#include <linux/display_state.h>
 #include "governor.h"
 
 #ifdef CONFIG_ADRENO_IDLER
@@ -72,8 +72,12 @@ static void do_partner_start_event(struct work_struct *work);
 static void do_partner_stop_event(struct work_struct *work);
 static void do_partner_suspend_event(struct work_struct *work);
 static void do_partner_resume_event(struct work_struct *work);
+
 /* Boolean to detect if pm has entered suspend mode */
 static bool suspended = false;
+
+// Boolean to Check Display's State i.e., Off/On.
+static bool display_on;
 
 static struct workqueue_struct *workqueue;
 
@@ -359,6 +363,8 @@ static int tz_get_target_freq(struct devfreq *devfreq, unsigned long *freq,
 	unsigned int scm_data[4];
 	int context_count = 0;
 
+	display_on = is_display_on();
+
 	/* keeps stats.private_data == NULL   */
 	result = devfreq->profile->get_dev_status(devfreq->dev.parent, &stats);
 	if (result) {
@@ -385,7 +391,7 @@ static int tz_get_target_freq(struct devfreq *devfreq, unsigned long *freq,
 	 * Force to use & record as min freq when system has
 	 * entered pm-suspend or screen-off state.
 	 */
-	if (suspended || power_suspended) {
+	if (suspended || !display_on) {
 		*freq = devfreq->profile->freq_table[devfreq->profile->max_state - 1];
 		return 0;
 	}
