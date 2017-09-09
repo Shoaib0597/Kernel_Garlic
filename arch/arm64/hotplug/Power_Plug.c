@@ -24,7 +24,7 @@
 #define DYN_UP_THRES			98
 #define DYN_DOWN_THRES			49
 #define DEFAULT_MAX_CPUS_ONLINE		NR_CPUS
-#define DEFAULT_MIN_CPUS_ONLINE		2
+#define DEFAULT_MIN_CPUS_ONLINE		5
 
 static struct power_plug {
 	unsigned int toggle;
