@@ -480,6 +480,9 @@ module_param_named(
 	int, S_IRUSR | S_IWUSR
 );
 
+int USB_Fast_Charge = 1;
+module_param (USB_Fast_Charge, int, 0644);
+
 #define WIPOWER_DEFAULT_HYSTERISIS_UV	250000
 static int wipower_dcin_hyst_uv = WIPOWER_DEFAULT_HYSTERISIS_UV;
 module_param_named(
@@ -1730,9 +1733,15 @@ static int smbchg_set_usb_current_max(struct smbchg_chip *chip,
 				if (rc < 0)
 					pr_err("Couldn't set ICL override rc = %d\n",
 							rc);
-			} else {
-				/* default to 500mA */
-				current_ma = CURRENT_500_MA;
+			} 
+			else 
+			{
+			    if (USB_Fast_Charge == 1)
+			       // Default to 900 mA
+			       current_ma = CURRENT_900_MA;
+			    else
+				// Default to 500 mA
+			        current_ma = CURRENT_500_MA;
 			}
 			pr_smb(PR_STATUS,
 				"override_usb_current=%d current_ma set to %d\n",
@@ -3765,6 +3774,9 @@ static void smbchg_external_power_changed(struct power_supply *psy)
 
 	if (usb_supply_type != POWER_SUPPLY_TYPE_USB)
 		goto  skip_current_for_non_sdp;
+
+	if (USB_Fast_Charge == 1)
+	   current_limit = CURRENT_900_MA;
 
 	pr_smb(PR_MISC, "usb type = %s current_limit = %d\n",
 			usb_type_name, current_limit);
