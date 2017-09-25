@@ -1,5 +1,5 @@
 /*
- * PowerPlug HotPlug v1.3, a Dynamic HotPlug (Based on State Helper Driver) for Octa-Core big.LITTLE SoCs.
+ * PowerPlug HotPlug v1.6, a Dynamic HotPlug (Based on State Helper Driver) for Octa-Core big.LITTLE SoCs.
  *
  * Copyright (c) 2016, Pranav Vashi <neobuddy89@gmail.com>.
  * Copyright (c) 2017, Shoaib Anwar <Shoaib0595@gmail.com>.
