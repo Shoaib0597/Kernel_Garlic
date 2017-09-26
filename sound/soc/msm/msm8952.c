@@ -52,6 +52,12 @@
 #define MAX_WSA_CODEC_NAME_LENGTH 80
 #define MSM_DT_MAX_PROP_SIZE 80
 
+//++ camera selfie stick TN:peter
+#if defined CONFIG_PROJECT_P7705 ||defined CONFIG_PROJECT_P7203 ||defined CONFIG_PROJECT_P7201 ||defined CONFIG_PROJECT_P7701
+#define CAMERA_SELFIE_STICK
+#endif
+//-- camera selfie stick
+
 enum btsco_rates {
 	RATE_8KHZ_ID,
 	RATE_16KHZ_ID,
@@ -72,6 +78,16 @@ static atomic_t quat_mi2s_clk_ref;
 static atomic_t quin_mi2s_clk_ref;
 static atomic_t auxpcm_mi2s_clk_ref;
 
+//yangliang add for external padac for spk;20150708
+#if defined(CONFIG_PROJECT_P7701) || defined(CONFIG_PROJECT_P7705) || defined(CONFIG_PROJECT_P7203) || defined(CONFIG_PROJECT_P7201)
+int ext_spk_pa_gpio = -1;
+#endif
+
+#if defined(CONFIG_PROJECT_P7201)
+int ext_spk_pa_gpio_compatible = -1;///yangliang add for pa compatible 20170112
+#endif
+
+bool ext_spk_pa_current_state = false;//yangliang add to feedback ext pa-spk used state for insert hph of spk-voice and out hph resulting in spk-voice no downlink 20160530
 static int msm8952_enable_dig_cdc_clk(struct snd_soc_codec *codec, int enable,
 					bool dapm);
 static bool msm8952_swap_gnd_mic(struct snd_soc_codec *codec);
@@ -85,6 +101,26 @@ static int msm8952_wsa_switch_event(struct snd_soc_dapm_widget *w,
  * Need to report LINEIN
  * if R/L channel impedance is larger than 5K ohm
  */
+#if defined(CONFIG_PROJECT_P7201)
+static struct wcd_mbhc_config mbhc_cfg = {//yangliang mask and add for p7201 linear hph20160729
+	.read_fw_bin = false,
+	.calibration = NULL,
+	.detect_extn_cable = true,
+	.mono_stero_detection = false,
+	.swap_gnd_mic = NULL,
+	.hs_ext_micbias = false,
+	.key_code[0] = KEY_MEDIA,
+	//.key_code[1] = KEY_VOICECOMMAND,
+	.key_code[1] = KEY_VOLUMEUP,
+	.key_code[2] = KEY_VOLUMEDOWN,
+	.key_code[3] = 0,////yangliang mask and add for p7201 linear hph20160729
+	.key_code[4] = 0,
+	.key_code[5] = 0,
+	.key_code[6] = 0,
+	.key_code[7] = 0,
+	.linein_th = 5000,
+};
+#else
 static struct wcd_mbhc_config mbhc_cfg = {
 	.read_fw_bin = false,
 	.calibration = NULL,
@@ -102,6 +138,7 @@ static struct wcd_mbhc_config mbhc_cfg = {
 	.key_code[7] = 0,
 	.linein_th = 5000,
 };
+#endif
 
 static struct afe_clk_cfg mi2s_rx_clk_v1 = {
 	AFE_API_VERSION_I2S_CONFIG,
@@ -239,61 +276,216 @@ done:
 int is_ext_spk_gpio_support(struct platform_device *pdev,
 			struct msm8916_asoc_mach_data *pdata)
 {
+	//int ret = 0; 
 	const char *spk_ext_pa = "qcom,msm-spk-ext-pa";
+	#if defined(CONFIG_PROJECT_P7201)
+		const char *spk_ext_pa_compatible = "qcom,msm-spk-ext-pa-compatible";///yangliang add for pa compatible20170112
+	#endif
+	//static bool ext_pa_gpio_requested = false;//yangliang add for pa mode-2;20150901	
 
 	pr_debug("%s:Enter\n", __func__);
 
 	pdata->spk_ext_pa_gpio = of_get_named_gpio(pdev->dev.of_node,
 				spk_ext_pa, 0);
+	#if defined(CONFIG_PROJECT_P7201)
+		pdata->spk_ext_pa_gpio_compatible = of_get_named_gpio(pdev->dev.of_node,
+				spk_ext_pa_compatible, 0);///yangliang add for pa compatible20170112
+	#endif
+	#if defined(CONFIG_PROJECT_P7701) || defined(CONFIG_PROJECT_P7705) || defined(CONFIG_PROJECT_P7201) || defined(CONFIG_PROJECT_P7203)
+		ext_spk_pa_gpio = pdata->spk_ext_pa_gpio;//yangliang add 
+	#endif
 
-	if (pdata->spk_ext_pa_gpio < 0) {
+	#if defined(CONFIG_PROJECT_P7201)
+		ext_spk_pa_gpio_compatible = pdata->spk_ext_pa_gpio_compatible;//yangliang add for pa compatible20170112
+	#endif
+
+#if defined(CONFIG_PROJECT_P7201)
+	if ((pdata->spk_ext_pa_gpio < 0) && (pdata->spk_ext_pa_gpio_compatible < 0)) {//yangliang add for pa compatible20170112
 		dev_dbg(&pdev->dev,
 			"%s: missing %s in dt node\n", __func__, spk_ext_pa);
 	} else {
-		if (!gpio_is_valid(pdata->spk_ext_pa_gpio)) {
+		if ((!gpio_is_valid(pdata->spk_ext_pa_gpio)) && (!gpio_is_valid(pdata->spk_ext_pa_gpio_compatible))) {//yangliang add for pa compatible20170112
+			pr_err("%s: Invalid external speaker gpio: %d",
+				__func__, pdata->spk_ext_pa_gpio);
+			pr_err("%s: Invalid external speaker gpio compatible: %d",
+				__func__, pdata->spk_ext_pa_gpio_compatible);///yangliang add for pa compatible20170112
+			return -EINVAL;
+		}
+		gpio_direction_output(pdata->spk_ext_pa_gpio, 0); //<20160310>wangyanhui add for ext speaker--new
+		gpio_direction_output(pdata->spk_ext_pa_gpio_compatible, 0);///yangliang add for pa compatible20170112
+	}
+#elif (!defined(CONFIG_PROJECT_P7201))
+	if ((pdata->spk_ext_pa_gpio < 0)) {//yangliang add for pa compatible20170112
+		dev_dbg(&pdev->dev,
+			"%s: missing %s in dt node\n", __func__, spk_ext_pa);
+	} else {
+		if ((!gpio_is_valid(pdata->spk_ext_pa_gpio)) && (!gpio_is_valid(pdata->spk_ext_pa_gpio_compatible))) {//yangliang add for pa compatible20170112
 			pr_err("%s: Invalid external speaker gpio: %d",
 				__func__, pdata->spk_ext_pa_gpio);
 			return -EINVAL;
 		}
+		gpio_direction_output(pdata->spk_ext_pa_gpio, 0); //<20160310>wangyanhui add for ext speaker--new
+	}
+#endif
+
+
+	return 0;
+}
+#ifdef CONFIG_PROJECT_P7601 //added by liuweiwei for aw89319pa
+extern unsigned char AW87319_Audio_Speaker(void);
+extern unsigned char AW87319_Audio_OFF(void);
+
+static int enable_spk_ext_pa(struct snd_soc_codec *codec, int enable)
+{
+	pr_debug("%s: %s external speaker PA\n", __func__,
+			enable ? "Enable" : "Disable");
+	if(enable)
+	{
+		AW87319_Audio_Speaker();
+	}
+	else
+	{
+		AW87319_Audio_OFF();
 	}
 	return 0;
 }
-
+#else
 static int enable_spk_ext_pa(struct snd_soc_codec *codec, int enable)
 {
 	struct snd_soc_card *card = codec->component.card;
 	struct msm8916_asoc_mach_data *pdata = snd_soc_card_get_drvdata(card);
-	int ret;
+	//int ret; //<20160310>wangyanhui delete for  ext spk
+	int ret = 0;
 
+	#if defined(CONFIG_PROJECT_P7201)
+		int ret_compatible = 0;//yangliang add for pa compatible20170112
+	#endif
+	
+	static bool ext_pa_gpio_requested = false;//yangliang add for pa mode-2;20150901	
+
+	#if defined(CONFIG_PROJECT_P7201)
+	static bool ext_pa_gpio_requested_compatible = false;//yangliang add for pa compatible20170112
+	#endif
+	#if (!defined(CONFIG_PROJECT_P7201))
 	if (!gpio_is_valid(pdata->spk_ext_pa_gpio)) {
 		pr_err("%s: Invalid gpio: %d\n", __func__,
 			pdata->spk_ext_pa_gpio);
 		return false;
 	}
+	#elif defined(CONFIG_PROJECT_P7201)
+	if ((!gpio_is_valid(pdata->spk_ext_pa_gpio)) && (!gpio_is_valid(pdata->spk_ext_pa_gpio_compatible))) {//yangliang add for pa compatible20170112 		
+		pr_err("%s: Invalid gpio: %d\n", __func__, 			
+			pdata->spk_ext_pa_gpio);
+		pr_err("%s: Invalid gpio compatible: %d\n", __func__,
+			pdata->spk_ext_pa_gpio_compatible); 		
+		return false; 	
+	}
+	#endif
 
 	pr_debug("%s: %s external speaker PA\n", __func__,
 		enable ? "Enable" : "Disable");
+	//pa mode 2  TN:peter
+	//gpio_set_value_cansleep(pdata->spk_ext_pa_gpio, enable);
+
+	//yangliang add for enable pa mode-2;20150901 requested gpio before any operations to avoid gpio_ensure_requested warning in gpiolib.c.
+	pr_info("ext_pa_gpio_requested=%d\n", ext_pa_gpio_requested);
+	#if (!defined(CONFIG_PROJECT_P7201))
+	if(!ext_pa_gpio_requested) {
+		ret = gpio_request(pdata->spk_ext_pa_gpio, "spk_ext_pa_gpio"); 
+		if (ret) {
+			pr_info("%s: gpio_request failed for spk_ext_pa_gpio.\n", 
+				__func__); 
+			goto err; 
+		}
+
+		ext_pa_gpio_requested = true;
+	}
+	#elif defined(CONFIG_PROJECT_P7201)
+	pr_info("ext_pa_gpio_requested_compatible=%d\n", ext_pa_gpio_requested_compatible);
+	if((!ext_pa_gpio_requested) && (!ext_pa_gpio_requested_compatible)){
+		ret = gpio_request(pdata->spk_ext_pa_gpio, "spk_ext_pa_gpio"); 
+		ret_compatible = gpio_request(pdata->spk_ext_pa_gpio_compatible, "spk_ext_pa_gpio_compatible");///yangliang add for pa compatible20170112
+		if (ret && ret_compatible) {///yangliang add for pa compatible20170112
+			pr_info("%s: gpio_request failed for spk_ext_pa_gpio.\n", 
+				__func__); 
+			goto err; 
+		}
+
+		ext_pa_gpio_requested = true;
+		ext_pa_gpio_requested_compatible = true;///yangliang add for pa compatible20170112
+	}
+	#endif
 
 	if (enable) {
-		ret = msm_gpioset_activate(CLIENT_WCD_INT, "ext_spk_gpio");
+		//<20160310>wangyanhui delete for  ext spk
+		/*ret = msm_gpioset_activate(CLIENT_WCD_INT, "ext_spk_gpio");
 		if (ret) {
 			pr_err("%s: gpio set cannot be de-activated %s\n",
 					__func__, "ext_spk_gpio");
 			return ret;
-		}
-		gpio_set_value_cansleep(pdata->spk_ext_pa_gpio, enable);
+		}*/
+		//#ifdef CONFIG_PROJECT_P7705	//external pa mode 2 TN:Peter	
+		#if defined(CONFIG_PROJECT_P7701) || defined(CONFIG_PROJECT_P7705) || defined(CONFIG_PROJECT_P7203)
+			printk(KERN_ERR"goto mode-2\n");
+			ext_spk_pa_current_state = true;//yangliang add to feedback ext pa-spk used state for insert hph of spk-voice and out hph resulting in spk-voice no downlink 20160530
+			//gpio_set_value_cansleep(pdata->spk_ext_pa_gpio, 0);		
+			//udelay(2);
+			gpio_set_value_cansleep(pdata->spk_ext_pa_gpio, 1);		
+			udelay(2);
+			gpio_set_value_cansleep(pdata->spk_ext_pa_gpio, 0);			
+			udelay(2);
+			gpio_set_value_cansleep(pdata->spk_ext_pa_gpio, 1);
+		//#else
+			//ext_spk_pa_current_state = true;//yangliang add to feedback ext pa-spk used state for insert hph of spk-voice and out hph resulting in spk-voice no downlink 20160530
+			//gpio_set_value_cansleep(pdata->spk_ext_pa_gpio, enable);
+		//#endif
+
+		#elif defined(CONFIG_PROJECT_P7201)
+			printk(KERN_ERR"goto mode-2 and do compatible\n");
+			ext_spk_pa_current_state = true;//yangliang add to feedback ext pa-spk used state for insert hph of spk-voice and out hph resulting in spk-voice no downlink 20160530
+			//gpio_set_value_cansleep(pdata->spk_ext_pa_gpio, 0);		
+			//udelay(2);
+			gpio_set_value_cansleep(pdata->spk_ext_pa_gpio, 1);		
+			udelay(2);
+			gpio_set_value_cansleep(pdata->spk_ext_pa_gpio, 0);			
+			udelay(2);
+			gpio_set_value_cansleep(pdata->spk_ext_pa_gpio, 1);
+
+			///yangliang add for pa compatible20170112
+			gpio_set_value_cansleep(pdata->spk_ext_pa_gpio_compatible, 1);
+			udelay(2);
+			gpio_set_value_cansleep(pdata->spk_ext_pa_gpio_compatible, 0);
+			udelay(2);
+			gpio_set_value_cansleep(pdata->spk_ext_pa_gpio_compatible, 1);
+			///yangliang add for pa compatible20170112 end
+		#else
+			ext_spk_pa_current_state = true;//yangliang add to feedback ext pa-spk used state for insert hph of spk-voice and out hph resulting in spk-voice no downlink 20160530
+			gpio_set_value_cansleep(pdata->spk_ext_pa_gpio, enable);
+
+			#if defined(CONFIG_PROJECT_P7201)
+				gpio_set_value_cansleep(pdata->spk_ext_pa_gpio_compatible, enable);///yangliang add for pa compatible20170112
+			#endif
+			
+		#endif
+
 	} else {
+		ext_spk_pa_current_state = false;//yangliang add to feedback ext pa-spk used state for insert hph of spk-voice and out hph resulting in spk-voice no downlink 20160530
 		gpio_set_value_cansleep(pdata->spk_ext_pa_gpio, enable);
-		ret = msm_gpioset_suspend(CLIENT_WCD_INT, "ext_spk_gpio");
+		#if defined(CONFIG_PROJECT_P7201)
+			gpio_set_value_cansleep(pdata->spk_ext_pa_gpio_compatible, enable);///yangliang add for pa compatible20170112
+		#endif
+		//<20160310>wangyanhui delete for  ext spk
+		/*ret = msm_gpioset_suspend(CLIENT_WCD_INT, "ext_spk_gpio");
 		if (ret) {
 			pr_err("%s: gpio set cannot be de-activated %s\n",
 					__func__, "ext_spk_gpio");
 			return ret;
-		}
+		}*/
 	}
+err:
 	return 0;
 }
-
+#endif
 /* Validate whether US EU switch is present or not */
 int is_us_eu_switch_gpio_support(struct platform_device *pdev,
 		struct msm8916_asoc_mach_data *pdata)
@@ -1513,9 +1705,15 @@ static void *def_msm8952_wcd_mbhc_cal(void)
 				WCD_MBHC_DEF_RLOADS), GFP_KERNEL);
 	if (!msm8952_wcd_cal)
 		return NULL;
-
+//++ camera selfie stick TN:peter
+#ifdef  CAMERA_SELFIE_STICK	
+#define S(X, Y) ((WCD_MBHC_CAL_PLUG_TYPE_PTR(msm8952_wcd_cal)->X) = (Y))
+	S(v_hs_max, 1700);
+#else
 #define S(X, Y) ((WCD_MBHC_CAL_PLUG_TYPE_PTR(msm8952_wcd_cal)->X) = (Y))
 	S(v_hs_max, 1500);
+#endif
+//-- camera selfie stick
 #undef S
 #define S(X, Y) ((WCD_MBHC_CAL_BTN_DET_PTR(msm8952_wcd_cal)->X) = (Y))
 	S(num_btn, WCD_MBHC_DEF_BUTTONS);
@@ -1538,6 +1736,19 @@ static void *def_msm8952_wcd_mbhc_cal(void)
 	 * 210-290 == Button 2
 	 * 360-680 == Button 3
 	 */
+	#if 1 //def CONFIG_PROJECT_P7705 //TN:peter  //<use same para>wangyanhui 
+ 	btn_low[0] = 120;
+	btn_high[0] = 600;
+	btn_low[1] = 200;
+	btn_high[1] = 700;
+	btn_low[2] = 200;
+	btn_high[2] = 700;
+	btn_low[3] = 200;
+	btn_high[3] = 700;
+	btn_low[4] = 200;
+	btn_high[4] = 700;
+	#else
+       //<20160310>wangyanhui for headset btn  
 	btn_low[0] = 75;
 	btn_high[0] = 75;
 	btn_low[1] = 150;
@@ -1546,8 +1757,35 @@ static void *def_msm8952_wcd_mbhc_cal(void)
 	btn_high[2] = 225;
 	btn_low[3] = 450;
 	btn_high[3] = 450;
+	#endif
+	
+	//bt2 ==> camera selfie stick TN:peter 
+	#if defined CONFIG_PROJECT_P7705 ||defined CONFIG_PROJECT_P7203 ||defined CONFIG_PROJECT_P7701//TN:peter
+	btn_low[0] = 75;
+	btn_high[0] = 75;
+	btn_low[1] = 100;
+	btn_high[1] = 100;
+	btn_low[2] = 450;
+	btn_high[2] = 450;
+	btn_low[3] = 480;
+	btn_high[3] = 480;
 	btn_low[4] = 500;
 	btn_high[4] = 500;
+	#endif 
+
+	//yangliang mask and add for p7201 linear hph20160729
+	#if defined(CONFIG_PROJECT_P7201)
+ 	btn_low[0] = 100;
+	btn_high[0] = 100;
+	btn_low[1] = 250;
+	btn_high[1] = 250;
+	btn_low[2] = 438;
+	btn_high[2] = 438;
+	btn_low[3] = 480;
+	btn_high[3] = 480;
+	btn_low[4] = 500;
+	btn_high[4] = 500;
+	#endif
 
 	return msm8952_wcd_cal;
 }
@@ -1728,6 +1966,7 @@ static struct snd_soc_dai_link msm8952_dai[] = {
 		.platform_name	= "msm-pcm-hostless",
 		.dynamic = 1,
 		.dpcm_playback = 1,
+		.dpcm_capture = 1,
 		.trigger = {SND_SOC_DPCM_TRIGGER_POST,
 			SND_SOC_DPCM_TRIGGER_POST},
 		.no_host_mode = SND_SOC_DAI_LINK_NO_HOST,
@@ -1955,6 +2194,7 @@ static struct snd_soc_dai_link msm8952_dai[] = {
 		.cpu_dai_name = "LSM1",
 		.platform_name = "msm-lsm-client",
 		.dynamic = 1,
+		.dpcm_playback = 1,
 		.dpcm_capture = 1,
 		.trigger = {SND_SOC_DPCM_TRIGGER_POST,
 			SND_SOC_DPCM_TRIGGER_POST },
@@ -2052,6 +2292,7 @@ static struct snd_soc_dai_link msm8952_dai[] = {
 		.platform_name = "msm-pcm-hostless",
 		.dynamic = 1,
 		.dpcm_playback = 1,
+		.dpcm_capture = 1,
 		.trigger = {SND_SOC_DPCM_TRIGGER_POST,
 			SND_SOC_DPCM_TRIGGER_POST},
 		.no_host_mode = SND_SOC_DAI_LINK_NO_HOST,
@@ -2258,6 +2499,35 @@ static struct snd_soc_dai_link msm8952_dai[] = {
 		.ignore_pmdown_time = 1,
 		.be_id = MSM_FRONTEND_DAI_QCHAT,
 	},
+
+	#if defined(CONFIG_PROJECT_I9051) || defined(CONFIG_PROJECT_P6901) //yangliang add for smartpa 20161008
+	#if 1
+	{ /* hw:x,37 */
+		.name = "QUIN_MI2S Hostless",
+		.stream_name = "QUIN_MI2S Hostless",
+		.cpu_dai_name = "QUIN_MI2S_RX_HOSTLESS",
+		.platform_name = "msm-pcm-hostless",
+		.dynamic = 1,
+		.dpcm_playback = 1,//yangliang add 20161025
+		.trigger = {SND_SOC_DPCM_TRIGGER_POST,
+			SND_SOC_DPCM_TRIGGER_POST},
+		.no_host_mode = SND_SOC_DAI_LINK_NO_HOST,
+		.ignore_suspend = 1,
+		/* this dainlink has playback support */
+		.ignore_pmdown_time = 1,
+		/* tfa98xx: nxp smart pa for speaker */
+		
+		#if defined(CONFIG_PROJECT_I9051)
+		.codec_dai_name = "tfa98xx-aif-8-34",//"tfa98xx_codec",yangliang change old name to new name;20161026
+		.codec_name = "tfa98xx.8-0034",//it is from tfa98xx.c tfa98xx_i2c_driver`s  .name = "tfa98xx",  ;yangliang
+		#elif defined(CONFIG_PROJECT_P6901)
+		.codec_dai_name = "tfa98xx-aif-2-34",//"tfa98xx_codec",yangliang change old name to new name;20161026
+		.codec_name = "tfa98xx.2-0034",//it is from tfa98xx.c tfa98xx_i2c_driver`s  .name = "tfa98xx",  ;yangliang
+		#endif
+	},
+	#endif
+	#endif
+
 	/* Backend I2S DAI Links */
 	{
 		.name = LPASS_BE_PRI_MI2S_RX,
@@ -2540,6 +2810,33 @@ static struct snd_soc_dai_link msm8952_hdmi_dba_dai_link[] = {
 };
 
 static struct snd_soc_dai_link msm8952_quin_dai_link[] = {
+	#if defined(CONFIG_PROJECT_I9051) || defined(CONFIG_PROJECT_P6901) //yangliang add for smartpa 20161008
+		#if 1
+	{
+		.name = LPASS_BE_QUIN_MI2S_RX,
+		.stream_name = "Quinary MI2S Playback",
+		.cpu_dai_name = "msm-dai-q6-mi2s.5",
+		.platform_name = "msm-pcm-routing",
+
+		#if defined(CONFIG_PROJECT_I9051)
+		.codec_dai_name = "tfa98xx-aif-8-34",//"tfa98xx_codec",yangliang change old name to new name;20161026
+		.codec_name = "tfa98xx.8-0034",//it is from tfa98xx.c tfa98xx_i2c_driver`s  .name = "tfa98xx",  ;yangliang
+		#elif defined(CONFIG_PROJECT_P6901)
+		.codec_dai_name = "tfa98xx-aif-2-34",//"tfa98xx_codec",yangliang change old name to new name;20161026
+		.codec_name = "tfa98xx.2-0034",//it is from tfa98xx.c tfa98xx_i2c_driver`s  .name = "tfa98xx",  ;yangliang
+		#endif
+		
+		.no_pcm = 1,
+		.dpcm_playback = 1,//yangliang add for test from qualcomm songjingping20161025
+		.dai_fmt = SND_SOC_DAIFMT_I2S | SND_SOC_DAIFMT_CBS_CFS,
+		.be_id = MSM_BACKEND_DAI_QUINARY_MI2S_RX,
+		.be_hw_params_fixup = msm_mi2s_rx_be_hw_params_fixup,
+		.ops = &msm8952_quin_mi2s_be_ops,
+		.ignore_pmdown_time = 1, /* dai link has playback support */
+		.ignore_suspend = 1,
+	},
+		#endif
+	#else
 	{
 		.name = LPASS_BE_QUIN_MI2S_RX,
 		.stream_name = "Quinary MI2S Playback",
@@ -2555,6 +2852,7 @@ static struct snd_soc_dai_link msm8952_quin_dai_link[] = {
 		.ignore_pmdown_time = 1, /* dai link has playback support */
 		.ignore_suspend = 1,
 	},
+	#endif
 };
 
 static struct snd_soc_dai_link msm8952_split_a2dp_dai_link[] = {
@@ -3211,6 +3509,12 @@ static int msm8952_asoc_machine_remove(struct platform_device *pdev)
 	struct snd_soc_card *card = platform_get_drvdata(pdev);
 	struct msm8916_asoc_mach_data *pdata = snd_soc_card_get_drvdata(card);
 	int i;
+
+	//yangliang add for external padac for spk;20150708
+	#if defined(CONFIG_PROJECT_P7701) || defined(CONFIG_PROJECT_P7705) || defined(CONFIG_PROJECT_P7203) || defined(CONFIG_PROJECT_P7201)
+	if (gpio_is_valid(ext_spk_pa_gpio))
+		gpio_free(ext_spk_pa_gpio);
+	#endif
 
 	if (pdata->vaddr_gpio_mux_spkr_ctl)
 		iounmap(pdata->vaddr_gpio_mux_spkr_ctl);

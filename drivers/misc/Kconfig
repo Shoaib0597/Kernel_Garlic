@@ -581,6 +581,11 @@ config QPNP_MISC
 	  and the driver provides an API to check if this interrupt
 	  is available on the current PMIC chip.
 
+#BEGIN<REQ><FCEBL-64><20150901>Add store lcd  info;xiongdajun 
+config DEV_INFO
+	tristate "peripheral ic info"
+	default n
+#END<REQ><FCEBL-64><20150901>Add store lcd  info;xiongdajun 
 source "drivers/misc/c2port/Kconfig"
 source "drivers/misc/eeprom/Kconfig"
 source "drivers/misc/cb710/Kconfig"

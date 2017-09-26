@@ -29,6 +29,10 @@ static int32_t msm_sensor_driver_platform_probe(struct platform_device *pdev);
 
 /* Static declaration */
 static struct msm_sensor_ctrl_t *g_sctrl[MAX_CAMERAS];
+ 
+#ifdef CONFIG_DEV_INFO
+extern void store_camera_info(const char *const sensor_name, const char *const eeprom_name);
+#endif
 
 static int msm_sensor_platform_remove(struct platform_device *pdev)
 {
@@ -784,16 +788,19 @@ int32_t msm_sensor_driver_probe(void *setting,
 		 */
 		if (slave_info->sensor_id_info.sensor_id ==
 			s_ctrl->sensordata->cam_slave_info->
-				sensor_id_info.sensor_id &&
-			!(strcmp(slave_info->sensor_name,
-			s_ctrl->sensordata->cam_slave_info->sensor_name))) {
-			pr_err("slot%d: sensor name: %s sensor id%d already probed\n",
+				sensor_id_info.sensor_id) {
+		//Begin;HCABM-348;add sensor name compare;xiongdajun
+		if(!strncmp(slave_info->sensor_name, s_ctrl->sensordata->cam_slave_info->sensor_name,
+                strlen(slave_info->sensor_name))){
+		pr_err("add compare sensor name %s \n",s_ctrl->sensordata->cam_slave_info->sensor_name);
+			pr_err("slot%d: sensor id%d already probed\n",
 				slave_info->camera_id,
-				slave_info->sensor_name,
 				s_ctrl->sensordata->cam_slave_info->
 					sensor_id_info.sensor_id);
 			msm_sensor_fill_sensor_info(s_ctrl,
 				probed_info, entity_name);
+		}
+            //END;HCABM-348;add sensor name compare;xiongdajun
 		} else
 			pr_err("slot %d has some other sensor\n",
 				slave_info->camera_id);
@@ -915,6 +922,8 @@ CSID_TG:
 	}
 
 	pr_err("%s probe succeeded", slave_info->sensor_name);
+    
+        store_camera_info(slave_info->sensor_name, s_ctrl->sensordata->eeprom_name);
 
 	/*
 	 * Update the subdevice id of flash-src based on availability in kernel.
