@@ -1498,7 +1498,7 @@ phcd_retry:
 		enable_irq(motg->phy_irq);
 
 	enable_irq(motg->irq);
-	wake_unlock(&motg->wlock);
+	//wake_unlock(&motg->wlock);
 
 	dev_dbg(phy->dev, "LPM caps = %lu flags = %lu\n",
 			motg->caps, motg->lpm_flags);
@@ -1542,7 +1542,7 @@ static int msm_otg_resume(struct msm_otg *motg)
 	}
 
 	disable_irq(motg->irq);
-	wake_lock(&motg->wlock);
+	//wake_lock(&motg->wlock);
 
 	/*
 	 * If we are resuming from the device bus suspend, restore
@@ -4690,7 +4690,7 @@ static int msm_otg_probe(struct platform_device *pdev)
 	mb();
 
 	motg->id_state = USB_ID_FLOAT;
-	wake_lock_init(&motg->wlock, WAKE_LOCK_SUSPEND, "msm_otg");
+	//wake_lock_init(&motg->wlock, WAKE_LOCK_SUSPEND, "msm_otg");
 	INIT_WORK(&motg->sm_work, msm_otg_sm_work);
 	INIT_DELAYED_WORK(&motg->chg_work, msm_chg_detect_work);
 	INIT_DELAYED_WORK(&motg->id_status_work, msm_id_status_w);
@@ -4888,7 +4888,7 @@ static int msm_otg_probe(struct platform_device *pdev)
 	if (motg->pdata->phy_type == SNPS_FEMTO_PHY)
 		motg->caps |= ALLOW_BUS_SUSPEND_WITHOUT_REWORK;
 
-	wake_lock(&motg->wlock);
+	//wake_lock(&motg->wlock);
 	pm_runtime_set_active(&pdev->dev);
 	pm_runtime_enable(&pdev->dev);
 
@@ -4951,7 +4951,7 @@ free_irq:
 destroy_wq:
 	destroy_workqueue(motg->otg_wq);
 destroy_wlock:
-	wake_lock_destroy(&motg->wlock);
+	//wake_lock_destroy(&motg->wlock);
 	clk_disable_unprepare(motg->core_clk);
 	msm_hsusb_ldo_enable(motg, USB_PHY_REG_OFF);
 free_ldo_init:
@@ -5035,7 +5035,7 @@ static int msm_otg_remove(struct platform_device *pdev)
 
 	device_init_wakeup(&pdev->dev, 0);
 	pm_runtime_disable(&pdev->dev);
-	wake_lock_destroy(&motg->wlock);
+	//wake_lock_destroy(&motg->wlock);
 
 	if (motg->phy_irq)
 		free_irq(motg->phy_irq, motg);
