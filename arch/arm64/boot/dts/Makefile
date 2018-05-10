@@ -5,7 +5,7 @@ dts-dirs += cavium
 DTS_DIR := qcom
 
 ifeq ($(CONFIG_PROJECT_P7201),y)
-DTS_DIR := p7201
+DTS_DIR := qcom
 endif
 
 dts-dirs += $(DTS_DIR)
