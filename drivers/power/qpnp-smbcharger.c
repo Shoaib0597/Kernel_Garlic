@@ -1871,6 +1871,9 @@ static bool is_hvdcp_present(struct smbchg_chip *chip)
 	int rc;
 	u8 reg, hvdcp_sel;
 
+	// P-7201 doesn't supports HVDCP.
+	return false;
+
 	rc = smbchg_read(chip, &reg,
 			chip->usb_chgpth_base + USBIN_HVDCP_STS, 1);
 	if (rc < 0) {
