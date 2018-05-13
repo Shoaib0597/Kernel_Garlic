@@ -219,7 +219,7 @@
 			qcom,fastchg-current-ma = <1500>;
 			qcom,aicl-rerun-period-s = <180>;		
 			qcom,fastchg-current-comp = <700>;
-			qcom,thermal-mitigation = <1500 1200 1000 0>;  
+			qcom,thermal-mitigation = <1500 1000 500 0>;  
 
 			qcom,chgr@1000 {
 				reg = <0x1000 0x100>;
