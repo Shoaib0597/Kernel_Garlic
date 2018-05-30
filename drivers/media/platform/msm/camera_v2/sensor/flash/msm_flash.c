@@ -1008,7 +1008,7 @@ static int32_t msm_flash_get_dt_data(struct device_node *of_node,
 		return rc;
 	}
 
-#if (defined CONFIG_PROJECT_P7701)||(defined CONFIG_PROJECT_P7705)||(defined CONFIG_PROJECT_P7201)||(defined CONFIG_PROJECT_P7203) //MYOSC-710.ǰ������ƶ�����Ϊ�������л�ǰ��������ͷ����ʱǰ������Ʋ���.wupingzhou,20160611.
+#if (defined CONFIG_PROJECT_P7701)||(defined CONFIG_PROJECT_P7705)||(defined CONFIG_PROJECT_GARLIC)||(defined CONFIG_PROJECT_P7203) //MYOSC-710.ǰ������ƶ�����Ϊ�������л�ǰ��������ͷ����ʱǰ������Ʋ���.wupingzhou,20160611.
 #else
 	if (fctrl->flash_driver_type == FLASH_DRIVER_DEFAULT)
 		fctrl->flash_driver_type = FLASH_DRIVER_GPIO;

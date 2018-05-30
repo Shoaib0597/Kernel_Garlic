@@ -1396,7 +1396,7 @@ static void qpnp_flash_led_work(struct work_struct *work)
                     if(flash_node->prgm_current)
                         flash_node->prgm_current = 150;
            //jiangwei begin
-           #if defined(CONFIG_PROJECT_P7201) 
+           #if defined(CONFIG_PROJECT_GARLIC) 
                     if(flash_node->prgm_current)
                         flash_node->prgm_current = 150;
            #endif
@@ -1414,7 +1414,7 @@ static void qpnp_flash_led_work(struct work_struct *work)
 			}
 
 	           //jiangwei begin
-	           #if defined(CONFIG_PROJECT_P7201) 
+	           #if defined(CONFIG_PROJECT_GARLIC) 
 	                    if(flash_node->prgm_current2)
 	                        flash_node->prgm_current2 = 150;
 	           #endif
@@ -1605,7 +1605,7 @@ static void qpnp_flash_led_work(struct work_struct *work)
 			}
 
 		    //jiangwei begin
-		    #if  defined(CONFIG_PROJECT_P7201)
+		    #if  defined(CONFIG_PROJECT_GARLIC)
 					if(flash_node->prgm_current)
 					    flash_node->prgm_current = 750;
 		    #endif
@@ -1621,7 +1621,7 @@ static void qpnp_flash_led_work(struct work_struct *work)
 			}
 
 		    //jiangwei begin
-		    #if  defined(CONFIG_PROJECT_P7201)
+		    #if  defined(CONFIG_PROJECT_GARLIC)
 					if(flash_node->prgm_current2)
 					    flash_node->prgm_current2 = 750;
 		    #endif
