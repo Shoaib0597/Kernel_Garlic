@@ -101,7 +101,7 @@ unsigned short coordinate_y[150] = {0};
 * Output: None
 * Return: None
 *******************************************************************************/
-/*int fts_Gesture_init(struct input_dev *input_dev)
+int fts_Gesture_init(struct input_dev *input_dev)
 {
 	input_set_capability(input_dev, EV_KEY, KEY_POWER);
 	input_set_capability(input_dev, EV_KEY, KEY_GESTURE_U);
@@ -133,7 +133,7 @@ unsigned short coordinate_y[150] = {0};
 	__set_bit(KEY_GESTURE_Z, input_dev->keybit);
 
 	return 0;
-}*/
+}
 
 /*******************************************************************************
 * Name: fts_check_gesture

@@ -1802,8 +1802,7 @@ static int fts_ts_probe(struct i2c_client *client, const struct i2c_device_id *i
 
 #ifdef CONFIG_FT5XX_TGESTURE_FUNCTION
 #if FTS_GESTRUE_EN
-
-
+	fts_Gesture_init(input_dev);
 	ft5xx_key_dev= input_allocate_device();
 	if (! ft5xx_key_dev) {
 		dev_err(&client->dev,"[syna]SY_key_dev: fail!\n");
