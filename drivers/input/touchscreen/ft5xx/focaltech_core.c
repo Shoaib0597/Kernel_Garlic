@@ -1809,7 +1809,7 @@ static int fts_ts_probe(struct i2c_client *client, const struct i2c_device_id *i
 	}
 	__set_bit(EV_KEY,  ft5xx_key_dev->evbit);
 	__set_bit(KEY_FT5XX_SENSOR,  ft5xx_key_dev->keybit);
-	__set_bit(KEY_POWER,  ft5xx_key_dev->keybit);
+	__set_bit(KEY_WAKEUP,  ft5xx_key_dev->keybit);
 	ft5xx_key_dev->id.bustype = BUS_HOST;
 	ft5xx_key_dev->name = "TPFT5XX_GESTURE";
 	if(input_register_device(ft5xx_key_dev)) {
