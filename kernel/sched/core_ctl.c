@@ -83,6 +83,10 @@ static ssize_t store_min_cpus(struct cpu_data *state,
 	if (sscanf(buf, "%u\n", &val) != 1)
 		return -EINVAL;
 
+	// Always Keep atleast One Core Online.
+	if (val == 0)
+		val = 1;
+
 	state->min_cpus = min(val, state->max_cpus);
 	wake_up_hotplug_thread(state);
 
@@ -768,6 +772,10 @@ static void __ref do_hotplug(struct cpu_data *f)
 
 			/* Don't offline busy CPUs. */
 			if (c->is_busy)
+				continue;
+
+			// Never Offline Core-0.
+			if (c->cpu == 0)
 				continue;
 
 			pr_debug("Trying to Offline CPU%u\n", c->cpu);
