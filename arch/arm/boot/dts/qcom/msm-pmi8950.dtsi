@@ -208,7 +208,7 @@
 			qcom,pmic-revid = <&pmi8950_revid>;
                         
 			qcom,chg-inhibit-fg;
-			qcom,iterm-ma = <250>;
+			qcom,iterm-ma = <50>;
 			qcom,force-aicl-rerun;
 			qcom,autoadjust-vfloat;
 			qcom,bms-psy-name = "bms";
@@ -328,10 +328,10 @@
 			qcom,cycle-counter-en;
 			qcom,resume-soc = <98>;
 			qcom,fg-delta-soc = <1>;
-			qcom,fg-iterm-ma = <300>;
+			qcom,fg-iterm-ma = <100>;
 			qcom,hold-soc-while-full;
 			qcom,capacity-learning-on;
-			qcom,fg-chg-iterm-ma = <250>;
+			qcom,fg-chg-iterm-ma = <50>;
 			qcom,bcl-lm-threshold-ma = <127>;
 			qcom,bcl-mh-threshold-ma = <405>;
 			qcom,fg-cutoff-voltage-mv = <3400>;
